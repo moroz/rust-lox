@@ -101,7 +101,9 @@ impl Scanner {
                     self.add_token(TokenType::Greater)
                 }
             }
+
             '/' => {
+                // When you find a comment, skip to the end of the line
                 if self.match_lookahead('/') {
                     while self.peek() != Some('\n') && !self.is_at_end() {
                         self.advance();
@@ -110,6 +112,12 @@ impl Scanner {
                     self.add_token(TokenType::Slash);
                 }
             }
+
+            // Ignore whitespace
+            ' ' | '\r' | '\t' => (),
+
+            '\n' => self.line += 1,
+
             _ => (),
         }
     }
