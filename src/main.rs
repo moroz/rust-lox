@@ -1,6 +1,7 @@
-use crate::token::Token;
+use crate::scanner::Scanner;
 use std::{env, fs};
 
+mod scanner;
 mod token;
 
 struct Lox {
@@ -29,24 +30,6 @@ impl Lox {
     fn run_file(self, filename: String) {
         let contents = fs::read_to_string(filename).unwrap();
         self.run(contents);
-    }
-}
-
-struct Scanner {
-    source: String,
-    has_error: bool,
-}
-
-impl Scanner {
-    fn new(source: String) -> Self {
-        Self {
-            source,
-            has_error: false,
-        }
-    }
-
-    fn scan_tokens(self) -> Vec<Token> {
-        unimplemented!()
     }
 }
 
