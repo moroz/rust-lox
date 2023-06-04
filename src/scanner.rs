@@ -33,6 +33,20 @@ impl Scanner {
         self.current >= self.final_index
     }
 
+    fn match_lookahead(&mut self, expected: char) -> bool {
+        if self.is_at_end() {
+            return false;
+        }
+
+        let next_char = self.source.get(self.current).cloned().unwrap();
+        if next_char != expected {
+            return false;
+        }
+
+        self.current += 1;
+        return true;
+    }
+
     fn add_token(&mut self, token_type: TokenType) {
         let lexeme: String = self.source[self.start..self.current].iter().collect();
         let token = Token::new(token_type, lexeme, self.line);
@@ -52,6 +66,34 @@ impl Scanner {
             '+' => self.add_token(TokenType::Plus),
             ';' => self.add_token(TokenType::Semicolon),
             '*' => self.add_token(TokenType::Star),
+            '!' => {
+                if self.match_lookahead('=') {
+                    self.add_token(TokenType::BangEqual)
+                } else {
+                    self.add_token(TokenType::Bang)
+                }
+            }
+            '=' => {
+                if self.match_lookahead('=') {
+                    self.add_token(TokenType::EqualEqual)
+                } else {
+                    self.add_token(TokenType::Equal)
+                }
+            }
+            '<' => {
+                if self.match_lookahead('=') {
+                    self.add_token(TokenType::LessEqual)
+                } else {
+                    self.add_token(TokenType::Less)
+                }
+            }
+            '>' => {
+                if self.match_lookahead('=') {
+                    self.add_token(TokenType::GreaterEqual)
+                } else {
+                    self.add_token(TokenType::Greater)
+                }
+            }
             _ => (),
         }
     }
