@@ -116,9 +116,20 @@ impl Scanner {
             // Ignore whitespace
             ' ' | '\r' | '\t' => (),
 
+            '"' => self.scan_string(),
+
             '\n' => self.line += 1,
 
             _ => (),
+        }
+    }
+
+    fn scan_string(&mut self) {
+        while self.peek() != Some('"') && !self.is_at_end() {
+            if self.peek() == Some('\n') {
+                self.line += 1;
+            }
+            self.advance();
         }
     }
 

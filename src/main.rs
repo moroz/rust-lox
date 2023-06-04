@@ -13,7 +13,7 @@ impl Lox {
         Self { had_error: false }
     }
 
-    fn report(mut self, line: isize, location: String, message: String) {
+    fn report(mut self, line: usize, location: String, message: String) {
         println!("[line {line}] Error {location}: {message}");
         self.had_error = true;
     }
