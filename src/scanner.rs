@@ -1,6 +1,16 @@
-use std::str::Chars;
-
 use crate::token::{Token, TokenType};
+
+#[derive(Clone, Debug)]
+pub struct ScanError {
+    pub line: usize,
+    pub message: String,
+    pub lexeme: String,
+}
+
+pub struct ScanResult {
+    pub tokens: Vec<Token>,
+    pub errors: Vec<ScanError>,
+}
 
 pub struct Scanner {
     source: Vec<char>,
@@ -9,6 +19,7 @@ pub struct Scanner {
     line: usize,
     final_index: usize,
     tokens: Vec<Token>,
+    errors: Vec<ScanError>,
 }
 
 impl Scanner {
@@ -20,6 +31,7 @@ impl Scanner {
             line: 1,
             final_index: source.chars().count(),
             tokens: Vec::new(),
+            errors: Vec::new(),
         }
     }
 
@@ -120,7 +132,11 @@ impl Scanner {
 
             '\n' => self.line += 1,
 
-            _ => (),
+            other => self.errors.push(ScanError {
+                line: self.line,
+                message: "Unexpected character.".to_string(),
+                lexeme: other.to_string(),
+            }),
         }
     }
 
@@ -133,11 +149,19 @@ impl Scanner {
         }
     }
 
-    pub fn scan_tokens(&mut self) -> Vec<Token> {
+    pub fn scan_tokens(&mut self) -> Result<ScanResult, ScanResult> {
         while !self.is_at_end() {
             self.start = self.current;
             self.scan_token();
         }
-        return self.tokens.clone();
+        let result = ScanResult {
+            errors: self.errors.clone(),
+            tokens: self.tokens.clone(),
+        };
+        if self.errors.is_empty() {
+            return Ok(result);
+        } else {
+            return Err(result);
+        }
     }
 }

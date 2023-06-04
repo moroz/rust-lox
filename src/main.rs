@@ -13,17 +13,21 @@ impl Lox {
         Self { had_error: false }
     }
 
-    fn report(mut self, line: usize, location: String, message: String) {
-        println!("[line {line}] Error {location}: {message}");
-        self.had_error = true;
-    }
-
-    fn run(mut self, source: String) {
+    fn run(self, source: String) {
         let mut scanner = Scanner::new(source);
         let tokens = scanner.scan_tokens();
 
-        for token in tokens {
-            println!("{:?}", token);
+        match tokens {
+            Ok(result) => {
+                for token in result.tokens {
+                    println!("{:?}", token);
+                }
+            }
+            Err(result) => {
+                for error in result.errors {
+                    println!("{:?}", error);
+                }
+            }
         }
     }
 
@@ -39,7 +43,7 @@ fn main() {
         std::process::exit(64);
     } else if env::args().len() == 2 {
         let args: Vec<_> = env::args().collect();
-        let mut lox = Lox::new();
+        let lox = Lox::new();
         lox.run_file(args[1].clone());
     }
     //     run_
