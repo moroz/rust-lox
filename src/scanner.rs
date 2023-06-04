@@ -47,6 +47,13 @@ impl Scanner {
         return true;
     }
 
+    fn peek(&self) -> Option<char> {
+        if self.is_at_end() {
+            return None;
+        }
+        return self.source.get(self.current).cloned();
+    }
+
     fn add_token(&mut self, token_type: TokenType) {
         let lexeme: String = self.source[self.start..self.current].iter().collect();
         let token = Token::new(token_type, lexeme, self.line);
@@ -92,6 +99,15 @@ impl Scanner {
                     self.add_token(TokenType::GreaterEqual)
                 } else {
                     self.add_token(TokenType::Greater)
+                }
+            }
+            '/' => {
+                if self.match_lookahead('/') {
+                    while self.peek() != Some('\n') && !self.is_at_end() {
+                        self.advance();
+                    }
+                } else {
+                    self.add_token(TokenType::Slash);
                 }
             }
             _ => (),
