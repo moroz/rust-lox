@@ -1,4 +1,7 @@
+use crate::token::Token;
 use std::{env, fs};
+
+mod token;
 
 struct Lox {
     had_error: bool,
@@ -33,9 +36,6 @@ struct Scanner {
     source: String,
     has_error: bool,
 }
-
-#[derive(Debug)]
-struct Token {}
 
 impl Scanner {
     fn new(source: String) -> Self {
