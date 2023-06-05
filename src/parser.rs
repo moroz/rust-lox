@@ -17,6 +17,9 @@ impl Parser {
     }
 
     pub fn parse(&mut self) -> Option<Expression> {
+        if self.tokens.len() == 1 {
+            return Some(Expression::Literal(Literal::Nil));
+        }
         Some(self.expression())
     }
 
