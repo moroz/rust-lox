@@ -1,3 +1,4 @@
+use crate::interpreter::EvaluationResult;
 use crate::literal::Literal;
 use crate::token::Token;
 use std::fmt::Display;
@@ -17,21 +18,20 @@ pub enum Stmt {
 }
 
 impl Stmt {
-    pub fn evaluate(&self) {
+    pub fn evaluate(&self) -> EvaluationResult {
         match self {
             Self::Print(expr) => self.evaluate_print(expr),
-            Self::Expression(expr) => self.evaluate_expr(expr),
+            Self::Expression(expr) => expr.evaluate(),
         }
     }
 
-    fn evaluate_expr(&self, expr: &Expr) {
-        expr.evaluate().ok();
-    }
-
-    fn evaluate_print(&self, expr: &Expr) {
+    fn evaluate_print(&self, expr: &Expr) -> EvaluationResult {
         match expr.evaluate() {
-            Ok(value) => println!("{}", value),
-            Err(reason) => println!("{:?}", reason),
+            Ok(value) => {
+                println!("{}", value);
+                Ok(Literal::Nil)
+            }
+            other => other,
         }
     }
 }

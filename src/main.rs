@@ -28,7 +28,13 @@ impl Lox {
                 let mut parser = Parser::new(tokens);
                 let statements = parser.parse();
                 for stmt in statements {
-                    stmt.evaluate();
+                    match stmt.evaluate() {
+                        Err(reason) => {
+                            println!("{:?}", reason);
+                            break;
+                        }
+                        _ => (),
+                    }
                 }
             }
             Err(errors) => {
