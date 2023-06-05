@@ -1,3 +1,6 @@
-// !=
-!= / *
-"Hello world!"; 21.37 42
+var x = 42;
+print "Hello world!";
+
+if y == true {
+  print "Hehe";
+}

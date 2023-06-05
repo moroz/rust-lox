@@ -23,7 +23,15 @@ pub struct Scanner {
 }
 
 fn is_digit(c: &char) -> bool {
-    ('0'..'9').contains(c)
+    ('0'..='9').contains(c)
+}
+
+fn is_alpha(c: &char) -> bool {
+    ('a'..='z').contains(c) || ('A'..='Z').contains(c) || c == &'_'
+}
+
+fn is_alphanumeric(c: &char) -> bool {
+    is_digit(c) || is_alpha(c)
 }
 
 impl Scanner {
@@ -78,7 +86,7 @@ impl Scanner {
     }
 
     fn add_token(&mut self, token_type: TokenType) {
-        let lexeme: String = self.source[self.start..self.current].iter().collect();
+        let lexeme = self.get_current_lexeme();
         let token = Token::new(token_type, lexeme, self.line);
         self.tokens.push(token);
     }
@@ -143,6 +151,8 @@ impl Scanner {
 
             '0'..='9' => self.scan_number(),
 
+            'a'..='z' | 'A'..='Z' | '_' => self.scan_identifier(),
+
             '\n' => self.line += 1,
 
             other => self.errors.push(ScanError {
@@ -181,6 +191,10 @@ impl Scanner {
         self.add_token(TokenType::String(value));
     }
 
+    fn get_current_lexeme(&self) -> String {
+        self.source[self.start..self.current].iter().collect()
+    }
+
     fn scan_number(&mut self) {
         while let Some(digit) = self.peek() {
             if is_digit(&digit) {
@@ -205,9 +219,22 @@ impl Scanner {
             }
         }
 
-        let as_string: String = self.source[self.start..self.current].iter().collect();
+        let as_string = self.get_current_lexeme();
         let value: f64 = as_string.parse().unwrap();
         self.add_token(TokenType::Number(value));
+    }
+
+    fn scan_identifier(&mut self) {
+        while let Some(c) = self.peek() {
+            if is_alphanumeric(&c) {
+                self.advance();
+            } else {
+                break;
+            }
+        }
+
+        let lexeme = self.get_current_lexeme();
+        self.add_token(Token::match_keyword(lexeme.as_str()));
     }
 
     pub fn scan_tokens(&mut self) -> Result<ScanResult, ScanResult> {
