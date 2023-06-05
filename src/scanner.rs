@@ -4,7 +4,7 @@ use crate::token::{Token, TokenType};
 pub struct ScanError {
     pub line: usize,
     pub message: String,
-    pub lexeme: String,
+    pub lexeme: Option<String>,
 }
 
 pub struct ScanResult {
@@ -20,6 +20,10 @@ pub struct Scanner {
     final_index: usize,
     tokens: Vec<Token>,
     errors: Vec<ScanError>,
+}
+
+fn is_digit(c: &char) -> bool {
+    ('0'..'9').contains(c)
 }
 
 impl Scanner {
@@ -64,6 +68,13 @@ impl Scanner {
             return None;
         }
         return self.source.get(self.current).cloned();
+    }
+
+    fn peek_next(&self) -> Option<char> {
+        if self.current + 1 > self.final_index {
+            return None;
+        }
+        return self.source.get(self.current + 1).cloned();
     }
 
     fn add_token(&mut self, token_type: TokenType) {
@@ -130,14 +141,24 @@ impl Scanner {
 
             '"' => self.scan_string(),
 
+            '0'..='9' => self.scan_number(),
+
             '\n' => self.line += 1,
 
             other => self.errors.push(ScanError {
                 line: self.line,
                 message: "Unexpected character.".to_string(),
-                lexeme: other.to_string(),
+                lexeme: Some(other.to_string()),
             }),
         }
+    }
+
+    fn add_error(&mut self, message: String, lexeme: Option<String>) {
+        self.errors.push(ScanError {
+            line: self.line,
+            message,
+            lexeme,
+        })
     }
 
     fn scan_string(&mut self) {
@@ -147,6 +168,46 @@ impl Scanner {
             }
             self.advance();
         }
+
+        if self.is_at_end() {
+            self.add_error("Unterminated string literal".to_string(), None);
+            return;
+        }
+
+        self.advance();
+
+        let range = (self.start + 1)..(self.current - 1);
+        let value: String = self.source[range].iter().collect();
+        self.add_token(TokenType::String(value));
+    }
+
+    fn scan_number(&mut self) {
+        while let Some(digit) = self.peek() {
+            if is_digit(&digit) {
+                self.advance();
+            } else {
+                break;
+            }
+        }
+
+        if self.peek() == Some('.') {
+            if let Some(digit) = self.peek_next() {
+                if is_digit(&digit) {
+                    self.advance();
+                    while let Some(digit) = self.peek() {
+                        if is_digit(&digit) {
+                            self.advance();
+                        } else {
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        let as_string: String = self.source[self.start..self.current].iter().collect();
+        let value: f64 = as_string.parse().unwrap();
+        self.add_token(TokenType::Number(value));
     }
 
     pub fn scan_tokens(&mut self) -> Result<ScanResult, ScanResult> {
