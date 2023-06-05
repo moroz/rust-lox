@@ -1,3 +1,5 @@
+use parser::Parser;
+
 use crate::scanner::Scanner;
 use std::{env, fs};
 
@@ -19,9 +21,9 @@ impl Lox {
 
         match tokens {
             Ok(result) => {
-                for token in result.tokens {
-                    println!("{:?}", token);
-                }
+                let mut parser = Parser::new(result.tokens);
+                let expr = parser.parse().unwrap();
+                println!("{}", expr);
             }
             Err(result) => {
                 for error in result.errors {
@@ -46,6 +48,4 @@ fn main() {
         let lox = Lox::new();
         lox.run_file(args[1].clone());
     }
-    //     run_
-    // }
 }

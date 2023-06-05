@@ -1,6 +1,1 @@
-var x = 42;
-print "Hello world!";
-
-if y == true {
-  print "Hehe";
-}
+2 + 2 * 2 == 6

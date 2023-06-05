@@ -15,6 +15,36 @@ impl Parser {
         Self { tokens, current: 0 }
     }
 
+    pub fn parse(&mut self) -> Option<Expression> {
+        Some(self.expression())
+    }
+
+    fn synchronize(&mut self) {
+        self.advance();
+
+        while !self.is_at_end() {
+            if self.previous().token_type == TokenType::Semicolon {
+                return;
+            }
+
+            match self.peek().token_type {
+                TokenType::Class
+                | TokenType::Fun
+                | TokenType::Var
+                | TokenType::For
+                | TokenType::If
+                | TokenType::While
+                | TokenType::Print
+                | TokenType::Return => {
+                    return;
+                }
+                _ => (),
+            }
+
+            self.advance();
+        }
+    }
+
     fn expression(&mut self) -> Expression {
         self.equality()
     }
@@ -115,7 +145,7 @@ impl Parser {
                 return Expression::Grouping(Box::new(expr));
             }
             _ => {
-                panic!()
+                panic!("Expected expression")
             }
         }
     }
