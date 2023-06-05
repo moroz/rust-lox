@@ -2,6 +2,7 @@ use crate::scanner::Scanner;
 use std::{env, fs};
 
 mod expr;
+mod parser;
 mod scanner;
 mod token;
 

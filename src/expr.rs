@@ -5,6 +5,8 @@ use std::fmt::Display;
 pub enum Literal {
     String(String),
     Number(f64),
+    Boolean(bool),
+    Nil,
 }
 
 impl Display for Literal {
@@ -15,6 +17,12 @@ impl Display for Literal {
             }
             Self::Number(n) => {
                 write!(f, "{}", n)
+            }
+            Self::Boolean(b) => {
+                write!(f, "{}", b)
+            }
+            Self::Nil => {
+                write!(f, "nil")
             }
         }
     }
