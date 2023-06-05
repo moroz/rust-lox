@@ -1,7 +1,8 @@
 use core::panic;
 
 use crate::{
-    expr::{Expression, Literal},
+    expr::Expression,
+    literal::Literal,
     token::{Token, TokenType},
 };
 

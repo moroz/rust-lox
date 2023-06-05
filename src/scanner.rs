@@ -7,10 +7,7 @@ pub struct ScanError {
     pub lexeme: Option<String>,
 }
 
-pub struct ScanResult {
-    pub tokens: Vec<Token>,
-    pub errors: Vec<ScanError>,
-}
+pub type ScanResult = Result<Vec<Token>, Vec<ScanError>>;
 
 pub struct Scanner {
     source: Vec<char>,
@@ -237,20 +234,16 @@ impl Scanner {
         self.add_token(Token::match_keyword(lexeme.as_str()));
     }
 
-    pub fn scan_tokens(&mut self) -> Result<ScanResult, ScanResult> {
+    pub fn scan_tokens(&mut self) -> ScanResult {
         while !self.is_at_end() {
             self.start = self.current;
             self.scan_token();
         }
         self.add_token(TokenType::EOF);
-        let result = ScanResult {
-            errors: self.errors.clone(),
-            tokens: self.tokens.clone(),
-        };
         if self.errors.is_empty() {
-            return Ok(result);
+            return Ok(self.tokens.clone());
         } else {
-            return Err(result);
+            return Err(self.errors.clone());
         }
     }
 }

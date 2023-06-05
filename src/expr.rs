@@ -1,32 +1,6 @@
+use crate::literal::Literal;
 use crate::token::Token;
 use std::fmt::Display;
-
-#[derive(Clone)]
-pub enum Literal {
-    String(String),
-    Number(f64),
-    Boolean(bool),
-    Nil,
-}
-
-impl Display for Literal {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::String(s) => {
-                write!(f, "{}", s)
-            }
-            Self::Number(n) => {
-                write!(f, "{}", n)
-            }
-            Self::Boolean(b) => {
-                write!(f, "{}", b)
-            }
-            Self::Nil => {
-                write!(f, "nil")
-            }
-        }
-    }
-}
 
 #[derive(Clone)]
 pub enum Expression {

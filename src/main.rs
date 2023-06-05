@@ -3,7 +3,10 @@ use parser::Parser;
 use crate::scanner::Scanner;
 use std::{env, fs, io::Write};
 
+mod errors;
 mod expr;
+mod interpreter;
+mod literal;
 mod parser;
 mod scanner;
 mod token;
@@ -20,13 +23,13 @@ impl Lox {
         let tokens = scanner.scan_tokens();
 
         match tokens {
-            Ok(result) => {
-                let mut parser = Parser::new(result.tokens);
+            Ok(tokens) => {
+                let mut parser = Parser::new(tokens);
                 let expr = parser.parse().unwrap();
                 println!("{}", expr);
             }
-            Err(result) => {
-                for error in result.errors {
+            Err(errors) => {
+                for error in errors {
                     println!("{:?}", error);
                 }
             }
