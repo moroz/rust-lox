@@ -140,6 +140,7 @@ impl Parser {
                 return Expression::Literal(Literal::String(value.clone()));
             }
             TokenType::LeftParen => {
+                self.advance();
                 let expr = self.expression();
                 self.consume(&TokenType::RightParen, "Expected ')' after expression.");
                 return Expression::Grouping(Box::new(expr));
