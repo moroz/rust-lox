@@ -3,14 +3,20 @@ use crate::token::Token;
 use std::fmt::Display;
 
 #[derive(Clone)]
-pub enum Expression {
-    Binary(Box<Expression>, Token, Box<Expression>),
-    Grouping(Box<Expression>),
+pub enum Expr {
+    Binary(Box<Expr>, Token, Box<Expr>),
+    Grouping(Box<Expr>),
     Literal(Literal),
-    Unary(Token, Box<Expression>),
+    Unary(Token, Box<Expr>),
 }
 
-impl Display for Expression {
+#[derive(Clone)]
+pub enum Stmt {
+    Print(Expr),
+    Expression(Expr),
+}
+
+impl Display for Expr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Binary(left, operator, right) => {
@@ -36,7 +42,7 @@ mod tests {
 
     #[test]
     fn test_serialize_grouping() {
-        let expr = Expression::Grouping(Box::new(Expression::Literal(Literal::Number(45.67))));
+        let expr = Expr::Grouping(Box::new(Expr::Literal(Literal::Number(45.67))));
 
         let actual = format!("{}", expr);
         assert_eq!("(group 45.67)", actual);
@@ -44,9 +50,9 @@ mod tests {
 
     #[test]
     fn test_serialize_unary() {
-        let expr = Expression::Unary(
+        let expr = Expr::Unary(
             Token::new(TokenType::Minus, "-".to_string(), 1),
-            Box::new(Expression::Literal(Literal::Number(45.67))),
+            Box::new(Expr::Literal(Literal::Number(45.67))),
         );
 
         let actual = format!("{}", expr);
@@ -55,16 +61,16 @@ mod tests {
 
     #[test]
     fn test_serialize_binary() {
-        let left = Expression::Unary(
+        let left = Expr::Unary(
             Token::new(TokenType::Minus, "-".to_string(), 1),
-            Box::new(Expression::Literal(Literal::Number(123.0))),
+            Box::new(Expr::Literal(Literal::Number(123.0))),
         );
 
-        let right = Expression::Grouping(Box::new(Expression::Literal(Literal::Number(45.67))));
+        let right = Expr::Grouping(Box::new(Expr::Literal(Literal::Number(45.67))));
 
         let operator = Token::new(TokenType::Star, "*".to_string(), 1);
 
-        let expr = Expression::Binary(Box::new(left), operator, Box::new(right));
+        let expr = Expr::Binary(Box::new(left), operator, Box::new(right));
 
         let actual = format!("{}", expr);
         assert_eq!("(* (- 123) (group 45.67))", actual);

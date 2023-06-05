@@ -2,7 +2,7 @@ use crate::{
     errors::DetailedErrorType,
     errors::LoxError,
     errors::LoxErrorType,
-    expr::Expression,
+    expr::Expr,
     literal::Literal,
     token::{Token, TokenType},
 };
@@ -45,23 +45,19 @@ fn evaluate_comparison(operator: &Token, left: Literal, right: Literal) -> Evalu
     }
 }
 
-impl Expression {
+impl Expr {
     pub fn evaluate(&self) -> EvaluationResult {
         match self {
-            Expression::Literal(value) => Ok(value.to_owned()),
-            Expression::Grouping(expr) => expr.evaluate(),
-            Expression::Unary(operator, right) => self.evaluate_unary_expression(operator, right),
-            Expression::Binary(left, operator, right) => {
+            Expr::Literal(value) => Ok(value.to_owned()),
+            Expr::Grouping(expr) => expr.evaluate(),
+            Expr::Unary(operator, right) => self.evaluate_unary_expression(operator, right),
+            Expr::Binary(left, operator, right) => {
                 self.evaluate_binary_expression(left, operator, right)
             }
         }
     }
 
-    fn evaluate_unary_expression(
-        &self,
-        operator: &Token,
-        right: &Box<Expression>,
-    ) -> EvaluationResult {
+    fn evaluate_unary_expression(&self, operator: &Token, right: &Box<Expr>) -> EvaluationResult {
         let right = right.evaluate();
         if right.is_err() {
             return right;
@@ -86,9 +82,9 @@ impl Expression {
 
     fn evaluate_binary_expression(
         &self,
-        left: &Box<Expression>,
+        left: &Box<Expr>,
         operator: &Token,
-        right: &Box<Expression>,
+        right: &Box<Expr>,
     ) -> EvaluationResult {
         let left = left.evaluate();
         if left.is_err() {
