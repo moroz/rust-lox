@@ -1,16 +1,15 @@
 use crate::scanner::Scanner;
 use std::{env, fs};
 
+mod expr;
 mod scanner;
 mod token;
 
-struct Lox {
-    had_error: bool,
-}
+struct Lox;
 
 impl Lox {
     fn new() -> Self {
-        Self { had_error: false }
+        Self
     }
 
     fn run(self, source: String) {

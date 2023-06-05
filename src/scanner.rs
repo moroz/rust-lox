@@ -242,6 +242,7 @@ impl Scanner {
             self.start = self.current;
             self.scan_token();
         }
+        self.add_token(TokenType::EOF);
         let result = ScanResult {
             errors: self.errors.clone(),
             tokens: self.tokens.clone(),
