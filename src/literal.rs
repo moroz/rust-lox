@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::fmt::{Debug, Display};
 
 #[derive(Clone, PartialEq)]
 pub enum Literal {
@@ -8,11 +8,30 @@ pub enum Literal {
     Nil,
 }
 
-impl Display for Literal {
+impl Debug for Literal {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::String(s) => {
                 write!(f, "\"{}\"", s)
+            }
+            Self::Number(n) => {
+                write!(f, "{}", n)
+            }
+            Self::Boolean(b) => {
+                write!(f, "{}", b)
+            }
+            Self::Nil => {
+                write!(f, "nil")
+            }
+        }
+    }
+}
+
+impl Display for Literal {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::String(s) => {
+                write!(f, "{}", s)
             }
             Self::Number(n) => {
                 write!(f, "{}", n)

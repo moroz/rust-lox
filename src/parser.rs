@@ -1,7 +1,7 @@
 use core::panic;
 
 use crate::{
-    expr::Expr,
+    expr::{Expr, Stmt},
     literal::Literal,
     token::{Token, TokenType},
 };
@@ -16,11 +16,36 @@ impl Parser {
         Self { tokens, current: 0 }
     }
 
-    pub fn parse(&mut self) -> Option<Expr> {
+    pub fn parse(&mut self) -> Vec<Stmt> {
         if self.tokens.len() == 1 {
-            return Some(Expr::Literal(Literal::Nil));
+            return vec![Stmt::Expression(Expr::Literal(Literal::Nil))];
         }
-        Some(self.expression())
+
+        let mut program = Vec::new();
+        while !self.is_at_end() {
+            program.push(self.statement());
+        }
+        return program;
+    }
+
+    fn statement(&mut self) -> Stmt {
+        if self.match_token(&TokenType::Print) {
+            self.print_statement()
+        } else {
+            self.expr_statement()
+        }
+    }
+
+    fn print_statement(&mut self) -> Stmt {
+        let expr = self.expression();
+        self.consume(&TokenType::Semicolon, "Expected semicolon");
+        Stmt::Print(expr)
+    }
+
+    fn expr_statement(&mut self) -> Stmt {
+        let expr = self.expression();
+        self.consume(&TokenType::Semicolon, "Expected semicolon");
+        Stmt::Expression(expr)
     }
 
     fn synchronize(&mut self) {

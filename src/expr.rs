@@ -16,6 +16,26 @@ pub enum Stmt {
     Expression(Expr),
 }
 
+impl Stmt {
+    pub fn evaluate(&self) {
+        match self {
+            Self::Print(expr) => self.evaluate_print(expr),
+            Self::Expression(expr) => self.evaluate_expr(expr),
+        }
+    }
+
+    fn evaluate_expr(&self, expr: &Expr) {
+        expr.evaluate().ok();
+    }
+
+    fn evaluate_print(&self, expr: &Expr) {
+        match expr.evaluate() {
+            Ok(value) => println!("{}", value),
+            Err(reason) => println!("{:?}", reason),
+        }
+    }
+}
+
 impl Display for Expr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {

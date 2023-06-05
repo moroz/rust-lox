@@ -26,14 +26,9 @@ impl Lox {
         match tokens {
             Ok(tokens) => {
                 let mut parser = Parser::new(tokens);
-                let expr = parser.parse().unwrap();
-                match expr.evaluate() {
-                    Ok(value) => {
-                        println!("{}", value);
-                    }
-                    Err(error) => {
-                        println!("{:?}", error)
-                    }
+                let statements = parser.parse();
+                for stmt in statements {
+                    stmt.evaluate();
                 }
             }
             Err(errors) => {
