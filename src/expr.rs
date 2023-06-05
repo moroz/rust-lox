@@ -70,4 +70,21 @@ mod tests {
         let actual = format!("{}", expr);
         assert_eq!("(- 45.67)", actual);
     }
+
+    #[test]
+    fn test_serialize_binary() {
+        let left = Expression::Unary(
+            Token::new(TokenType::Minus, "-".to_string(), 1),
+            Box::new(Expression::Literal(Literal::Number(123.0))),
+        );
+
+        let right = Expression::Grouping(Box::new(Expression::Literal(Literal::Number(45.67))));
+
+        let operator = Token::new(TokenType::Star, "*".to_string(), 1);
+
+        let expr = Expression::Binary(Box::new(left), operator, Box::new(right));
+
+        let actual = format!("{}", expr);
+        assert_eq!("(* (- 123) (group 45.67))", actual);
+    }
 }
