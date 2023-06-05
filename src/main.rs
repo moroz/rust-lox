@@ -1,3 +1,4 @@
+use interpreter::EvaluationResult;
 use parser::Parser;
 
 use crate::scanner::Scanner;
@@ -26,7 +27,14 @@ impl Lox {
             Ok(tokens) => {
                 let mut parser = Parser::new(tokens);
                 let expr = parser.parse().unwrap();
-                println!("{}", expr);
+                match expr.evaluate() {
+                    Ok(value) => {
+                        println!("{}", value);
+                    }
+                    Err(error) => {
+                        println!("{:?}", error)
+                    }
+                }
             }
             Err(errors) => {
                 for error in errors {

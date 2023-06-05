@@ -12,7 +12,7 @@ impl Display for Literal {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::String(s) => {
-                write!(f, "{}", s)
+                write!(f, "\"{}\"", s)
             }
             Self::Number(n) => {
                 write!(f, "{}", n)
@@ -33,14 +33,6 @@ impl Literal {
             Self::Nil => false,
             Self::Boolean(false) => false,
             _ => true,
-        }
-    }
-
-    pub fn is_number_or_string(&self) -> bool {
-        match self {
-            Self::String(_) => true,
-            Self::Number(_) => true,
-            _ => false,
         }
     }
 }
