@@ -3,12 +3,14 @@ use std::collections::HashMap;
 
 pub struct Environment {
     values: HashMap<String, Literal>,
+    pub enclosing: Option<Box<Environment>>,
 }
 
 impl Environment {
     pub fn new() -> Self {
         Self {
             values: HashMap::new(),
+            enclosing: None,
         }
     }
 
@@ -19,7 +21,10 @@ impl Environment {
                 self.values.insert(name.into(), value);
                 true
             }
-            None => false,
+            None => match &mut self.enclosing {
+                None => false,
+                Some(env) => env.assign(name, value),
+            },
         }
     }
 
@@ -27,7 +32,14 @@ impl Environment {
         self.values.insert(name.into(), value);
     }
 
-    pub fn fetch(&mut self, name: impl Into<String>) -> Option<&Literal> {
-        self.values.get(&name.into())
+    pub fn fetch(&self, name: impl Into<String>) -> Option<&Literal> {
+        let name: String = name.into();
+        match self.values.get(&name) {
+            Some(value) => Some(value),
+            None => match &self.enclosing {
+                None => None,
+                Some(env) => env.fetch(name),
+            },
+        }
     }
 }
