@@ -93,14 +93,36 @@ impl Interpreter {
             Expr::Binary(left, operator, right) => {
                 self.evaluate_binary_expression(left, operator, right)
             }
-            Expr::Var(identifier) => match self.environment.fetch(&identifier.lexeme) {
-                Some(value) => Ok(value.to_owned()),
-                None => Err(LoxError::new(
-                    &identifier,
-                    LoxErrorType::RuntimeError,
-                    DetailedErrorType::UndeclaredIdentifier,
-                )),
-            },
+            Expr::Var(identifier) => self.evaluate_var(identifier),
+            Expr::Assign(identifier, expr) => self.evaluate_assignment(identifier, expr),
+        }
+    }
+
+    fn evaluate_var(&mut self, identifier: Token) -> EvaluationResult {
+        match self.environment.fetch(&identifier.lexeme) {
+            Some(value) => Ok(value.to_owned()),
+            None => Err(LoxError::new(
+                &identifier,
+                LoxErrorType::RuntimeError,
+                DetailedErrorType::UndeclaredIdentifier,
+            )),
+        }
+    }
+
+    fn evaluate_assignment(&mut self, identifier: Token, expr: Box<Expr>) -> EvaluationResult {
+        match self.evaluate(*expr) {
+            Ok(value) => {
+                if self.environment.assign(&identifier.lexeme, value) {
+                    Ok(Literal::Nil)
+                } else {
+                    Err(LoxError::new(
+                        &identifier,
+                        LoxErrorType::RuntimeError,
+                        DetailedErrorType::UndeclaredIdentifier,
+                    ))
+                }
+            }
+            Err(reason) => Err(reason),
         }
     }
 

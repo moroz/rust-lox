@@ -1,10 +1,10 @@
-use crate::interpreter::EvaluationResult;
 use crate::literal::Literal;
 use crate::token::Token;
 use std::fmt::Display;
 
 #[derive(Clone)]
 pub enum Expr {
+    Assign(Token, Box<Expr>),
     Binary(Box<Expr>, Token, Box<Expr>),
     Grouping(Box<Expr>),
     Literal(Literal),
@@ -36,6 +36,9 @@ impl Display for Expr {
             }
             Self::Var(token) => {
                 write!(f, "(var {})", token.lexeme)
+            }
+            Self::Assign(token, expr) => {
+                write!(f, "(assign {} {})", token.lexeme, expr)
             }
         }
     }
