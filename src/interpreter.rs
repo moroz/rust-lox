@@ -112,8 +112,8 @@ impl Interpreter {
     fn evaluate_assignment(&mut self, identifier: Token, expr: Box<Expr>) -> EvaluationResult {
         match self.evaluate(*expr) {
             Ok(value) => {
-                if self.environment.assign(&identifier.lexeme, value) {
-                    Ok(Literal::Nil)
+                if self.environment.assign(&identifier.lexeme, value.clone()) {
+                    Ok(value)
                 } else {
                     Err(LoxError::new(
                         &identifier,
