@@ -59,6 +59,7 @@ impl Interpreter {
             Stmt::If(condition, then_branch, else_branch) => {
                 Self::evaluate_if(env, condition, then_branch, else_branch)
             }
+            Stmt::While(condition, body) => Self::evaluate_while(env, condition, body),
             Stmt::Var(identifier, Some(initializer)) => match Self::evaluate(env, initializer) {
                 Ok(value) => {
                     env.borrow_mut().define(&identifier.lexeme, value);
@@ -108,6 +109,17 @@ impl Interpreter {
             return Self::evaluate_statement(env, *else_branch);
         }
         return Ok(Literal::Nil);
+    }
+
+    fn evaluate_while(
+        env: &RefCell<Environment>,
+        condition: Expr,
+        body: Box<Stmt>,
+    ) -> EvaluationResult {
+        while Self::evaluate(env, condition.clone())?.is_truthy() {
+            Self::evaluate_statement(env, *body.clone())?;
+        }
+        Ok(Literal::Nil)
     }
 
     pub fn evaluate(env: &RefCell<Environment>, expr: Expr) -> EvaluationResult {

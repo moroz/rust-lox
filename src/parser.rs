@@ -86,9 +86,14 @@ impl Parser {
                 self.advance();
                 self.print_statement()
             }
+            TokenType::While => {
+                self.advance();
+                self.while_statement()
+            }
             TokenType::LeftBrace => {
                 self.advance();
-                self.parse_block().map(|block| Stmt::Block(block))
+                let block = self.parse_block()?;
+                Ok(Stmt::Block(block))
             }
             TokenType::If => {
                 self.advance();
@@ -130,6 +135,15 @@ impl Parser {
         let expr = self.expression()?;
         self.consume(&TokenType::Semicolon, "Expected semicolon")?;
         Ok(Stmt::Print(expr))
+    }
+
+    fn while_statement(&mut self) -> ParseResult<Stmt> {
+        self.consume(&TokenType::LeftParen, "Expected '(' after 'while'.")?;
+        let condition = self.expression()?;
+        self.consume(&TokenType::RightParen, "Expected ')' after condition.")?;
+        let body = self.statement()?;
+
+        Ok(Stmt::While(condition, Box::new(body)))
     }
 
     fn expr_statement(&mut self) -> ParseResult<Stmt> {
