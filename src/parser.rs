@@ -222,7 +222,7 @@ impl Parser {
     }
 
     fn assignment(&mut self) -> ParseResult<Expr> {
-        let expr = self.equality();
+        let expr = self.or();
         if expr.is_err() {
             return expr;
         }
@@ -242,6 +242,46 @@ impl Parser {
         }
 
         return expr;
+    }
+
+    fn or(&mut self) -> ParseResult<Expr> {
+        let expr = self.and();
+        if expr.is_err() {
+            return expr;
+        }
+        let mut expr = expr.unwrap();
+
+        while self.match_token(&TokenType::Or) {
+            let operator = self.previous().clone();
+            let right = self.and();
+            if right.is_err() {
+                return right;
+            }
+            let right = right.unwrap();
+            expr = Expr::Logical(Box::new(expr), operator, Box::new(right));
+        }
+
+        return Ok(expr);
+    }
+
+    fn and(&mut self) -> ParseResult<Expr> {
+        let expr = self.equality();
+        if expr.is_err() {
+            return expr;
+        }
+        let mut expr = expr.unwrap();
+
+        while self.match_token(&TokenType::And) {
+            let operator = self.previous().clone();
+            let right = self.equality();
+            if right.is_err() {
+                return right;
+            }
+            let right = right.unwrap();
+            expr = Expr::Logical(Box::new(expr), operator, Box::new(right));
+        }
+
+        return Ok(expr);
     }
 
     fn equality(&mut self) -> ParseResult<Expr> {

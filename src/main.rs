@@ -1,5 +1,5 @@
 use environment::Environment;
-use interpreter::{EvaluationResult, Interpreter};
+use interpreter::Interpreter;
 use literal::Literal;
 use parser::Parser;
 

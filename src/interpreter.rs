@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 
 use crate::{
-    environment::{self, Environment},
+    environment::Environment,
     errors::DetailedErrorType,
     errors::LoxError,
     errors::LoxErrorType,
@@ -138,6 +138,9 @@ impl Interpreter {
             }
             Expr::Var(identifier) => self.evaluate_var(env, identifier),
             Expr::Assign(identifier, expr) => self.evaluate_assignment(env, identifier, expr),
+            Expr::Logical(left, operator, right) => {
+                self.evaluate_logical(env, left, operator, right)
+            }
         }
     }
 
@@ -149,6 +152,35 @@ impl Interpreter {
                 LoxErrorType::RuntimeError,
                 DetailedErrorType::UndeclaredIdentifier,
             )),
+        }
+    }
+
+    fn evaluate_logical(
+        &mut self,
+        env: &RefCell<Environment>,
+        left: Box<Expr>,
+        operator: Token,
+        right: Box<Expr>,
+    ) -> EvaluationResult {
+        match self.evaluate(env, *left) {
+            Err(reason) => {
+                return Err(reason);
+            }
+            Ok(value) => {
+                match operator.token_type {
+                    TokenType::Or => {
+                        if value.is_truthy() {
+                            return Ok(value);
+                        }
+                    }
+                    _ => {
+                        if !value.is_truthy() {
+                            return Ok(value);
+                        }
+                    }
+                }
+                return self.evaluate(env, *right);
+            }
         }
     }
 

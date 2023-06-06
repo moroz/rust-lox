@@ -1,5 +1,5 @@
 use crate::literal::Literal;
-use std::{cell::RefCell, collections::HashMap};
+use std::collections::HashMap;
 
 pub struct Environment {
     frames: Vec<HashMap<String, Literal>>,

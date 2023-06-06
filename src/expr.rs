@@ -8,6 +8,7 @@ pub enum Expr {
     Binary(Box<Expr>, Token, Box<Expr>),
     Grouping(Box<Expr>),
     Literal(Literal),
+    Logical(Box<Expr>, Token, Box<Expr>),
     Unary(Token, Box<Expr>),
     Var(Token),
 }
@@ -41,6 +42,9 @@ impl Display for Expr {
             }
             Self::Assign(token, expr) => {
                 write!(f, "(assign {} {})", token.lexeme, expr)
+            }
+            Self::Logical(left, operator, right) => {
+                write!(f, "({} {} {})", operator.lexeme, left, right)
             }
         }
     }
