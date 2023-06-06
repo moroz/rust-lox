@@ -9,12 +9,14 @@ pub enum Expr {
     Grouping(Box<Expr>),
     Literal(Literal),
     Unary(Token, Box<Expr>),
+    Var(Token),
 }
 
 #[derive(Clone)]
 pub enum Stmt {
     Print(Expr),
     Expression(Expr),
+    Var(Token, Option<Expr>),
 }
 
 impl Stmt {
@@ -50,6 +52,9 @@ impl Display for Expr {
             }
             Self::Unary(operator, expr) => {
                 write!(f, "({} {})", operator.lexeme, expr)
+            }
+            Self::Var(token) => {
+                write!(f, "(var {})", token.lexeme)
             }
         }
     }

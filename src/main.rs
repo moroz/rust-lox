@@ -4,6 +4,7 @@ use parser::Parser;
 use crate::scanner::Scanner;
 use std::{env, fs, io::Write};
 
+mod environment;
 mod errors;
 mod expr;
 mod interpreter;

@@ -11,6 +11,11 @@ pub struct Parser {
     current: usize,
 }
 
+#[derive(Clone, Debug)]
+struct ParseError(String);
+
+type ParseResult = Result<Stmt, ParseError>;
+
 impl Parser {
     pub fn new(tokens: Vec<Token>) -> Self {
         Self { tokens, current: 0 }
@@ -23,12 +28,56 @@ impl Parser {
 
         let mut program = Vec::new();
         while !self.is_at_end() {
-            program.push(self.statement());
+            if let Ok(stmt) = self.declaration() {
+                program.push(stmt);
+            } else {
+                self.synchronize();
+            }
         }
         return program;
     }
 
-    fn statement(&mut self) -> Stmt {
+    fn declaration(&mut self) -> ParseResult {
+        let result = if self.match_token(&TokenType::Var) {
+            self.var_declaration()
+        } else {
+            self.statement()
+        };
+
+        match result {
+            Ok(stmt) => Ok(stmt),
+            Err(reason) => {
+                self.synchronize();
+                Err(reason)
+            }
+        }
+    }
+
+    fn var_declaration(&mut self) -> ParseResult {
+        let identifier = self.peek();
+        match identifier.token_type {
+            TokenType::Identifier(_) => {
+                self.advance();
+
+                let mut initializer = None;
+                if self.match_token(&TokenType::Equal) {
+                    initializer = Some(self.expression());
+                }
+                match self.consume(
+                    &TokenType::Semicolon,
+                    "Expected ';' after variable declaration",
+                ) {
+                    Ok(_) => {
+                        return Ok(Stmt::Var(identifier, initializer));
+                    }
+                    Err(reason) => Err(reason),
+                }
+            }
+            _ => return Err(ParseError("Expected variable name.".to_string())),
+        }
+    }
+
+    fn statement(&mut self) -> ParseResult {
         if self.match_token(&TokenType::Print) {
             self.print_statement()
         } else {
@@ -36,16 +85,20 @@ impl Parser {
         }
     }
 
-    fn print_statement(&mut self) -> Stmt {
+    fn print_statement(&mut self) -> ParseResult {
         let expr = self.expression();
-        self.consume(&TokenType::Semicolon, "Expected semicolon");
-        Stmt::Print(expr)
+        match self.consume(&TokenType::Semicolon, "Expected semicolon") {
+            Ok(_) => Ok(Stmt::Print(expr)),
+            Err(reason) => Err(reason),
+        }
     }
 
-    fn expr_statement(&mut self) -> Stmt {
+    fn expr_statement(&mut self) -> ParseResult {
         let expr = self.expression();
-        self.consume(&TokenType::Semicolon, "Expected semicolon");
-        Stmt::Expression(expr)
+        match self.consume(&TokenType::Semicolon, "Expected semicolon") {
+            Ok(_) => Ok(Stmt::Expression(expr)),
+            Err(reason) => Err(reason),
+        }
     }
 
     fn synchronize(&mut self) {
@@ -174,18 +227,21 @@ impl Parser {
                 self.consume(&TokenType::RightParen, "Expected ')' after expression.");
                 return Expr::Grouping(Box::new(expr));
             }
+            TokenType::Identifier(_) => {
+                return Expr::Var(self.advance().to_owned());
+            }
             _ => {
                 panic!("Expected expression")
             }
         }
     }
 
-    fn consume(&mut self, token_type: &TokenType, msg: &str) -> &Token {
+    fn consume(&mut self, token_type: &TokenType, msg: &str) -> Result<&Token, ParseError> {
         if self.check(token_type) {
-            return self.advance();
+            return Ok(self.advance());
         }
 
-        panic!("{}", msg);
+        Err(ParseError(msg.to_owned()))
     }
 
     fn match_any_token(&mut self, tokens: &Vec<TokenType>) -> bool {
