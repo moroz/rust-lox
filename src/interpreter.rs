@@ -96,13 +96,9 @@ impl Interpreter {
     }
 
     fn evaluate_print(&mut self, env: &RefCell<Environment>, expr: Expr) -> EvaluationResult {
-        match self.evaluate(env, expr) {
-            Ok(value) => {
-                println!("{}", value);
-                Ok(Literal::Nil)
-            }
-            other => other,
-        }
+        let value = self.evaluate(env, expr)?;
+        println!("{}", value);
+        Ok(Literal::Nil)
     }
 
     fn evaluate_if(
@@ -112,20 +108,14 @@ impl Interpreter {
         then_branch: Box<Stmt>,
         else_branch: Option<Box<Stmt>>,
     ) -> EvaluationResult {
-        match self.evaluate(env, condition) {
-            Err(reason) => {
-                return Err(reason);
-            }
-            Ok(value) => {
-                if value.is_truthy() {
-                    return self.evaluate_statement(env, *then_branch);
-                }
-                if let Some(else_branch) = else_branch {
-                    return self.evaluate_statement(env, *else_branch);
-                }
-                return Ok(Literal::Nil);
-            }
+        let value = self.evaluate(env, condition)?;
+        if value.is_truthy() {
+            return self.evaluate_statement(env, *then_branch);
         }
+        if let Some(else_branch) = else_branch {
+            return self.evaluate_statement(env, *else_branch);
+        }
+        return Ok(Literal::Nil);
     }
 
     pub fn evaluate(&mut self, env: &RefCell<Environment>, expr: Expr) -> EvaluationResult {
@@ -162,26 +152,20 @@ impl Interpreter {
         operator: Token,
         right: Box<Expr>,
     ) -> EvaluationResult {
-        match self.evaluate(env, *left) {
-            Err(reason) => {
-                return Err(reason);
-            }
-            Ok(value) => {
-                match operator.token_type {
-                    TokenType::Or => {
-                        if value.is_truthy() {
-                            return Ok(value);
-                        }
-                    }
-                    _ => {
-                        if !value.is_truthy() {
-                            return Ok(value);
-                        }
-                    }
+        let value = self.evaluate(env, *left)?;
+        match operator.token_type {
+            TokenType::Or => {
+                if value.is_truthy() {
+                    return Ok(value);
                 }
-                return self.evaluate(env, *right);
+            }
+            _ => {
+                if !value.is_truthy() {
+                    return Ok(value);
+                }
             }
         }
+        return self.evaluate(env, *right);
     }
 
     fn evaluate_assignment(
@@ -190,19 +174,15 @@ impl Interpreter {
         identifier: Token,
         expr: Box<Expr>,
     ) -> EvaluationResult {
-        match self.evaluate(env, *expr) {
-            Ok(value) => {
-                if env.borrow_mut().assign(&identifier.lexeme, value.clone()) {
-                    Ok(value)
-                } else {
-                    Err(LoxError::new(
-                        &identifier,
-                        LoxErrorType::RuntimeError,
-                        DetailedErrorType::UndeclaredIdentifier,
-                    ))
-                }
-            }
-            Err(reason) => Err(reason),
+        let value = self.evaluate(env, *expr)?;
+        if env.borrow_mut().assign(&identifier.lexeme, value.clone()) {
+            Ok(value)
+        } else {
+            Err(LoxError::new(
+                &identifier,
+                LoxErrorType::RuntimeError,
+                DetailedErrorType::UndeclaredIdentifier,
+            ))
         }
     }
 
@@ -212,12 +192,7 @@ impl Interpreter {
         operator: Token,
         right: Box<Expr>,
     ) -> EvaluationResult {
-        let right = self.evaluate(env, *right);
-        if right.is_err() {
-            return right;
-        }
-
-        let right = right.unwrap();
+        let right = self.evaluate(env, *right)?;
         match operator.token_type {
             TokenType::Minus => match right {
                 Literal::Number(value) => Ok(Literal::Number(-value)),
@@ -241,17 +216,8 @@ impl Interpreter {
         operator: Token,
         right: Box<Expr>,
     ) -> EvaluationResult {
-        let left = self.evaluate(env, *left);
-        if left.is_err() {
-            return left;
-        }
-        let right = self.evaluate(env, *right);
-        if right.is_err() {
-            return right;
-        }
-
-        let left = left.unwrap();
-        let right = right.unwrap();
+        let left = self.evaluate(env, *left)?;
+        let right = self.evaluate(env, *right)?;
 
         match operator.token_type {
             TokenType::Plus => match (&left, &right) {
