@@ -14,10 +14,13 @@ impl<'a> Environment<'a> {
         }
     }
 
-    pub fn enclosed(enclosing: &'a RefCell<Self>) -> RefCell<Self> {
+    pub fn enclosed<'b>(enclosing: &'b RefCell<Self>) -> RefCell<Self>
+    where
+        'b: 'a,
+    {
         RefCell::new(Self {
             values: HashMap::new(),
-            enclosing: Some(&enclosing),
+            enclosing: Some(enclosing),
         })
     }
 

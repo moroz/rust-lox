@@ -55,7 +55,7 @@ impl Interpreter {
         Self
     }
 
-    pub fn evaluate_statement(
+    pub fn evaluate_statement<'b>(
         &mut self,
         env: &RefCell<Environment>,
         stmt: Stmt,
