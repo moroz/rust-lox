@@ -25,18 +25,26 @@ fn run(env: &RefCell<Environment>, source: String) -> Option<Literal> {
             let mut parser = Parser::new(tokens);
             let statements = parser.parse();
             let mut last: Option<Literal> = None;
-            for stmt in statements {
-                match interpreter.evaluate_statement(&env, stmt) {
-                    Err(reason) => {
-                        println!("{:?}", reason);
-                        break;
+            match statements {
+                Ok(statements) => {
+                    for stmt in statements {
+                        match interpreter.evaluate_statement(&env, stmt) {
+                            Err(reason) => {
+                                println!("{:?}", reason);
+                                break;
+                            }
+                            Ok(result) => {
+                                last = Some(result);
+                            }
+                        }
                     }
-                    Ok(result) => {
-                        last = Some(result);
-                    }
+                    return last;
+                }
+                Err(reason) => {
+                    println!("{:?}", reason);
+                    return None;
                 }
             }
-            return last;
         }
         Err(errors) => {
             for error in errors {

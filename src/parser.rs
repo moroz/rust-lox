@@ -10,7 +10,7 @@ pub struct Parser {
 }
 
 #[derive(Clone, Debug)]
-struct ParseError(String);
+pub struct ParseError(String);
 
 type ParseResult<T> = Result<T, ParseError>;
 
@@ -19,20 +19,28 @@ impl Parser {
         Self { tokens, current: 0 }
     }
 
-    pub fn parse(&mut self) -> Vec<Stmt> {
+    pub fn parse(&mut self) -> Result<Vec<Stmt>, ParseError> {
         if self.tokens.len() == 1 {
-            return vec![Stmt::Expression(Expr::Literal(Literal::Nil))];
+            return Ok(vec![Stmt::Expression(Expr::Literal(Literal::Nil))]);
         }
 
         let mut program = Vec::new();
         while !self.is_at_end() {
-            if let Ok(stmt) = self.declaration() {
-                program.push(stmt);
-            } else {
-                self.synchronize();
+            match self.declaration() {
+                Ok(stmt) => {
+                    program.push(stmt);
+                }
+                Err(reason) => {
+                    return Err(reason);
+                }
             }
+            // if let Ok(stmt) = self.declaration() {
+            //     program.push(stmt);
+            // } else {
+            //     self.synchronize();
+            // }
         }
-        return program;
+        return Ok(program);
     }
 
     fn declaration(&mut self) -> ParseResult<Stmt> {
