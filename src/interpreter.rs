@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 
 use crate::{
-    environment::Environment,
+    environment::{self, Environment},
     errors::DetailedErrorType,
     errors::LoxError,
     errors::LoxErrorType,
@@ -75,16 +75,18 @@ impl Interpreter {
                 Ok(Literal::Nil)
             }
             Stmt::Block(statements) => {
-                let environment = Environment::enclosed(env);
+                env.borrow_mut().add_frame();
 
                 for stmt in statements {
-                    match self.evaluate_statement(&environment, stmt) {
+                    match self.evaluate_statement(env, stmt) {
                         Ok(_) => (),
                         Err(reason) => {
+                            env.borrow_mut().pop_frame();
                             return Err(reason);
                         }
                     }
                 }
+                env.borrow_mut().pop_frame();
                 return Ok(Literal::Nil);
             }
         }

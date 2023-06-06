@@ -1,64 +1,55 @@
 use crate::literal::Literal;
 use std::{cell::RefCell, collections::HashMap};
 
-pub struct Environment<'a> {
-    values: HashMap<String, Literal>,
-    pub enclosing: Option<&'a RefCell<Environment<'a>>>,
+pub struct Environment {
+    frames: Vec<HashMap<String, Literal>>,
 }
 
-impl<'a> Environment<'a> {
+impl Environment {
     pub fn new() -> Self {
         Self {
-            values: HashMap::new(),
-            enclosing: None,
+            frames: vec![HashMap::new()],
         }
     }
 
-    pub fn enclosed<'b>(enclosing: &'b RefCell<Self>) -> RefCell<Self>
-    where
-        'b: 'a,
-    {
-        RefCell::new(Self {
-            values: HashMap::new(),
-            enclosing: Some(enclosing),
-        })
+    pub fn add_frame(&mut self) {
+        self.frames.push(HashMap::new());
+    }
+
+    pub fn pop_frame(&mut self) {
+        self.frames.pop();
     }
 
     pub fn assign(&mut self, name: impl Into<String>, value: Literal) -> bool {
         let name: String = name.into();
-        match self.values.get(&name) {
-            Some(_) => {
-                self.values.insert(name.into(), value);
-                true
+        for frame in self.frames.iter_mut().rev() {
+            match frame.get(&name) {
+                Some(_) => {
+                    frame.insert(name, value);
+                    return true;
+                }
+                None => (),
             }
-            None => match self.enclosing {
-                None => false,
-                Some(env) => env.borrow_mut().assign(name, value),
-            },
         }
+        return false;
     }
 
     pub fn define(&mut self, name: impl Into<String>, value: Literal) {
-        self.values.insert(name.into(), value);
-    }
-
-    pub fn get(&self, name: impl Into<String>) -> Option<Literal> {
-        let name: String = name.into();
-        return self.values.get(&name).cloned();
+        self.frames
+            .iter_mut()
+            .last()
+            .unwrap()
+            .insert(name.into(), value);
     }
 
     pub fn fetch(&self, name: impl Into<String>) -> Option<Literal> {
         let name: String = name.into();
-        match self.values.get(&name) {
-            None => match self.enclosing {
-                None => None,
-                Some(env) => {
-                    let env = env.borrow();
-                    let value = env.get(name);
-                    return value;
-                }
-            },
-            value => value.cloned(),
+        for frame in self.frames.iter().rev() {
+            match frame.get(&name) {
+                Some(value) => return Some(value.clone()),
+                None => (),
+            }
         }
+        return None;
     }
 }
