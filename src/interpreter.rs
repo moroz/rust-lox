@@ -60,15 +60,12 @@ impl Interpreter {
                 Self::execute_if(env, condition, then_branch, else_branch)
             }
             Stmt::While(condition, body) => Self::execute_while(env, condition, body),
-            Stmt::Var(identifier, Some(initializer)) => match Self::evaluate(env, initializer) {
-                Ok(value) => {
-                    env.borrow_mut().define(&identifier.lexeme, value);
-                    Ok(Literal::Nil)
-                }
-                Err(reason) => Err(reason),
-            },
-            Stmt::Var(identifier, None) => {
-                env.borrow_mut().define(&identifier.lexeme, Literal::Nil);
+            Stmt::Var(identifier, initializer) => {
+                let value = match initializer {
+                    Some(initializer) => Self::evaluate(env, initializer)?,
+                    _ => Literal::Nil,
+                };
+                env.borrow_mut().define(&identifier.lexeme, value);
                 Ok(Literal::Nil)
             }
             Stmt::Block(statements) => {
