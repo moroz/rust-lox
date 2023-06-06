@@ -1,6 +1,6 @@
 use crate::literal::Literal;
 use crate::token::Token;
-use std::fmt::Display;
+use std::fmt::Debug;
 
 #[derive(Clone)]
 pub enum Expr {
@@ -13,29 +13,29 @@ pub enum Expr {
     Var(Token),
 }
 
-impl Display for Expr {
+impl Debug for Expr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Binary(left, operator, right) => {
-                write!(f, "({} {} {})", operator.lexeme, left, right)
+                write!(f, "({} {:?} {:?})", operator.lexeme, left, right)
             }
             Self::Grouping(expr) => {
-                write!(f, "(group {})", expr)
+                write!(f, "(group {:?})", expr)
             }
             Self::Literal(expr) => {
                 write!(f, "{}", expr)
             }
             Self::Unary(operator, expr) => {
-                write!(f, "({} {})", operator.lexeme, expr)
+                write!(f, "({} {:?})", operator.lexeme, expr)
             }
             Self::Var(token) => {
                 write!(f, "(var {})", token.lexeme)
             }
             Self::Assign(token, expr) => {
-                write!(f, "(assign {} {})", token.lexeme, expr)
+                write!(f, "(assign {} {:?})", token.lexeme, expr)
             }
             Self::Logical(left, operator, right) => {
-                write!(f, "({} {} {})", operator.lexeme, left, right)
+                write!(f, "({} {:?} {:?})", operator.lexeme, left, right)
             }
         }
     }
@@ -50,7 +50,7 @@ mod tests {
     fn test_serialize_grouping() {
         let expr = Expr::Grouping(Box::new(Expr::Literal(Literal::Number(45.67))));
 
-        let actual = format!("{}", expr);
+        let actual = format!("{:?}", expr);
         assert_eq!("(group 45.67)", actual);
     }
 
@@ -61,7 +61,7 @@ mod tests {
             Box::new(Expr::Literal(Literal::Number(45.67))),
         );
 
-        let actual = format!("{}", expr);
+        let actual = format!("{:?}", expr);
         assert_eq!("(- 45.67)", actual);
     }
 
@@ -78,7 +78,7 @@ mod tests {
 
         let expr = Expr::Binary(Box::new(left), operator, Box::new(right));
 
-        let actual = format!("{}", expr);
+        let actual = format!("{:?}", expr);
         assert_eq!("(* (- 123) (group 45.67))", actual);
     }
 }

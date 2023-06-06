@@ -90,6 +90,10 @@ impl Parser {
                 self.advance();
                 self.while_statement()
             }
+            TokenType::For => {
+                self.advance();
+                self.for_statement()
+            }
             TokenType::LeftBrace => {
                 self.advance();
                 let block = self.parse_block()?;
@@ -144,6 +148,50 @@ impl Parser {
         let body = self.statement()?;
 
         Ok(Stmt::While(condition, Box::new(body)))
+    }
+
+    fn for_statement(&mut self) -> ParseResult<Stmt> {
+        self.consume(&TokenType::LeftParen, "Expected '(' after 'for'.")?;
+        let initializer = if self.match_token(&TokenType::Var) {
+            Some(self.var_declaration()?)
+        } else if self.match_token(&TokenType::Semicolon) {
+            None
+        } else {
+            Some(self.expr_statement()?)
+        };
+
+        let condition = match self.peek().token_type {
+            TokenType::Semicolon => None,
+            _ => Some(self.expression()?),
+        };
+        self.consume(&TokenType::Semicolon, "Expected ';' after loop condition.")?;
+
+        let increment = match self.peek().token_type {
+            TokenType::RightParen => None,
+            _ => Some(self.expression()?),
+        };
+        self.consume(&TokenType::RightParen, "Expected ')' after for clause.")?;
+
+        let body = self.statement()?;
+
+        let body = match increment {
+            Some(increment) => Stmt::Block(vec![body.clone(), Stmt::Expression(increment)]),
+            None => body,
+        };
+
+        let condition = match condition {
+            Some(condition) => condition,
+            None => Expr::Literal(Literal::Boolean(true)),
+        };
+
+        let loop_stmt = Stmt::While(condition, Box::new(body.clone()));
+
+        let result = match initializer {
+            Some(initializer) => Stmt::Block(vec![initializer, loop_stmt]),
+            None => body,
+        };
+
+        Ok(result)
     }
 
     fn expr_statement(&mut self) -> ParseResult<Stmt> {
