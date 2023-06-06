@@ -1,5 +1,6 @@
 use environment::Environment;
-use interpreter::Interpreter;
+use interpreter::{EvaluationResult, Interpreter};
+use literal::Literal;
 use parser::Parser;
 
 use crate::scanner::Scanner;
@@ -14,7 +15,7 @@ mod parser;
 mod scanner;
 mod token;
 
-fn run(env: &RefCell<Environment>, source: String) {
+fn run(env: &RefCell<Environment>, source: String) -> Option<Literal> {
     let mut scanner = Scanner::new(source);
     let tokens = scanner.scan_tokens();
     let mut interpreter = Interpreter::new();
@@ -23,20 +24,25 @@ fn run(env: &RefCell<Environment>, source: String) {
         Ok(tokens) => {
             let mut parser = Parser::new(tokens);
             let statements = parser.parse();
+            let mut last: Option<Literal> = None;
             for stmt in statements {
                 match interpreter.evaluate_statement(&env, stmt) {
                     Err(reason) => {
                         println!("{:?}", reason);
                         break;
                     }
-                    _ => (),
+                    Ok(result) => {
+                        last = Some(result);
+                    }
                 }
             }
+            return last;
         }
         Err(errors) => {
             for error in errors {
                 println!("{:?}", error);
             }
+            return None;
         }
     }
 }
@@ -57,7 +63,12 @@ fn run_prompt(env: &RefCell<Environment>) {
                 break;
             }
             Ok(_) => {
-                run(env, buffer.clone());
+                match run(env, buffer.clone()) {
+                    Some(value) => {
+                        println!("=> {}", value);
+                    }
+                    _ => (),
+                }
                 buffer.clear();
             }
             _ => {
