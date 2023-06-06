@@ -10,6 +10,7 @@ pub enum LoxErrorType {
 pub enum DetailedErrorType {
     ExpectedNumber,
     ExpectedNumberOrString,
+    UndeclaredIdentifier,
 }
 
 #[derive(Clone, Debug)]

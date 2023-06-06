@@ -1,4 +1,4 @@
-use interpreter::EvaluationResult;
+use interpreter::Interpreter;
 use parser::Parser;
 
 use crate::scanner::Scanner;
@@ -13,14 +13,18 @@ mod parser;
 mod scanner;
 mod token;
 
-struct Lox;
+struct Lox {
+    interpreter: Interpreter,
+}
 
 impl Lox {
     fn new() -> Self {
-        Self
+        Self {
+            interpreter: Interpreter::new(),
+        }
     }
 
-    fn run(&self, source: String) {
+    fn run(&mut self, source: String) {
         let mut scanner = Scanner::new(source);
         let tokens = scanner.scan_tokens();
 
@@ -29,7 +33,7 @@ impl Lox {
                 let mut parser = Parser::new(tokens);
                 let statements = parser.parse();
                 for stmt in statements {
-                    match stmt.evaluate() {
+                    match self.interpreter.evaluate_statement(stmt) {
                         Err(reason) => {
                             println!("{:?}", reason);
                             break;
@@ -46,12 +50,12 @@ impl Lox {
         }
     }
 
-    fn run_file(self, filename: String) {
+    fn run_file(&mut self, filename: String) {
         let contents = fs::read_to_string(filename).unwrap();
         self.run(contents);
     }
 
-    fn run_prompt(&self) {
+    fn run_prompt(&mut self) {
         let mut buffer = String::new();
 
         loop {
@@ -79,10 +83,10 @@ fn main() {
         std::process::exit(64);
     } else if env::args().len() == 2 {
         let args: Vec<_> = env::args().collect();
-        let lox = Lox::new();
+        let mut lox = Lox::new();
         lox.run_file(args[1].clone());
     } else {
-        let lox = Lox::new();
+        let mut lox = Lox::new();
         lox.run_prompt();
     }
 }

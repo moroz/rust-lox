@@ -19,25 +19,6 @@ pub enum Stmt {
     Var(Token, Option<Expr>),
 }
 
-impl Stmt {
-    pub fn evaluate(&self) -> EvaluationResult {
-        match self {
-            Self::Print(expr) => self.evaluate_print(expr),
-            Self::Expression(expr) => expr.evaluate(),
-        }
-    }
-
-    fn evaluate_print(&self, expr: &Expr) -> EvaluationResult {
-        match expr.evaluate() {
-            Ok(value) => {
-                println!("{}", value);
-                Ok(Literal::Nil)
-            }
-            other => other,
-        }
-    }
-}
-
 impl Display for Expr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
