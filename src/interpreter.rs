@@ -1,3 +1,5 @@
+use std::cell::RefCell;
+
 use crate::{
     environment::Environment,
     errors::DetailedErrorType,
@@ -46,37 +48,50 @@ fn evaluate_comparison(operator: Token, left: Literal, right: Literal) -> Evalua
     }
 }
 
-pub struct Interpreter {
-    environment: Environment,
-}
+pub struct Interpreter;
 
 impl Interpreter {
     pub fn new() -> Self {
-        Self {
-            environment: Environment::new(),
-        }
+        Self
     }
 
-    pub fn evaluate_statement(&mut self, stmt: Stmt) -> EvaluationResult {
+    pub fn evaluate_statement(
+        &mut self,
+        env: &RefCell<Environment>,
+        stmt: Stmt,
+    ) -> EvaluationResult {
         match stmt {
-            Stmt::Print(expr) => self.evaluate_print(expr),
-            Stmt::Expression(expr) => self.evaluate(expr),
-            Stmt::Var(identifier, Some(initializer)) => match self.evaluate(initializer) {
+            Stmt::Print(expr) => self.evaluate_print(env, expr),
+            Stmt::Expression(expr) => self.evaluate(env, expr),
+            Stmt::Var(identifier, Some(initializer)) => match self.evaluate(env, initializer) {
                 Ok(value) => {
-                    self.environment.define(&identifier.lexeme, value);
+                    env.borrow_mut().define(&identifier.lexeme, value);
                     Ok(Literal::Nil)
                 }
                 Err(reason) => Err(reason),
             },
             Stmt::Var(identifier, None) => {
-                self.environment.define(&identifier.lexeme, Literal::Nil);
+                env.borrow_mut().define(&identifier.lexeme, Literal::Nil);
                 Ok(Literal::Nil)
+            }
+            Stmt::Block(statements) => {
+                let environment = Environment::enclosed(env);
+
+                for stmt in statements {
+                    match self.evaluate_statement(&environment, stmt) {
+                        Ok(_) => (),
+                        Err(reason) => {
+                            return Err(reason);
+                        }
+                    }
+                }
+                return Ok(Literal::Nil);
             }
         }
     }
 
-    fn evaluate_print(&mut self, expr: Expr) -> EvaluationResult {
-        match self.evaluate(expr) {
+    fn evaluate_print(&mut self, env: &RefCell<Environment>, expr: Expr) -> EvaluationResult {
+        match self.evaluate(env, expr) {
             Ok(value) => {
                 println!("{}", value);
                 Ok(Literal::Nil)
@@ -85,21 +100,21 @@ impl Interpreter {
         }
     }
 
-    pub fn evaluate(&mut self, expr: Expr) -> EvaluationResult {
+    pub fn evaluate(&mut self, env: &RefCell<Environment>, expr: Expr) -> EvaluationResult {
         match expr {
             Expr::Literal(value) => Ok(value.to_owned()),
-            Expr::Grouping(expr) => self.evaluate(*expr),
-            Expr::Unary(operator, right) => self.evaluate_unary_expression(operator, right),
+            Expr::Grouping(expr) => self.evaluate(env, *expr),
+            Expr::Unary(operator, right) => self.evaluate_unary_expression(env, operator, right),
             Expr::Binary(left, operator, right) => {
-                self.evaluate_binary_expression(left, operator, right)
+                self.evaluate_binary_expression(env, left, operator, right)
             }
-            Expr::Var(identifier) => self.evaluate_var(identifier),
-            Expr::Assign(identifier, expr) => self.evaluate_assignment(identifier, expr),
+            Expr::Var(identifier) => self.evaluate_var(env, identifier),
+            Expr::Assign(identifier, expr) => self.evaluate_assignment(env, identifier, expr),
         }
     }
 
-    fn evaluate_var(&mut self, identifier: Token) -> EvaluationResult {
-        match self.environment.fetch(&identifier.lexeme) {
+    fn evaluate_var(&mut self, env: &RefCell<Environment>, identifier: Token) -> EvaluationResult {
+        match env.borrow().fetch(&identifier.lexeme) {
             Some(value) => Ok(value.to_owned()),
             None => Err(LoxError::new(
                 &identifier,
@@ -109,10 +124,15 @@ impl Interpreter {
         }
     }
 
-    fn evaluate_assignment(&mut self, identifier: Token, expr: Box<Expr>) -> EvaluationResult {
-        match self.evaluate(*expr) {
+    fn evaluate_assignment(
+        &mut self,
+        env: &RefCell<Environment>,
+        identifier: Token,
+        expr: Box<Expr>,
+    ) -> EvaluationResult {
+        match self.evaluate(env, *expr) {
             Ok(value) => {
-                if self.environment.assign(&identifier.lexeme, value.clone()) {
+                if env.borrow_mut().assign(&identifier.lexeme, value.clone()) {
                     Ok(value)
                 } else {
                     Err(LoxError::new(
@@ -126,8 +146,13 @@ impl Interpreter {
         }
     }
 
-    fn evaluate_unary_expression(&mut self, operator: Token, right: Box<Expr>) -> EvaluationResult {
-        let right = self.evaluate(*right);
+    fn evaluate_unary_expression(
+        &mut self,
+        env: &RefCell<Environment>,
+        operator: Token,
+        right: Box<Expr>,
+    ) -> EvaluationResult {
+        let right = self.evaluate(env, *right);
         if right.is_err() {
             return right;
         }
@@ -151,15 +176,16 @@ impl Interpreter {
 
     fn evaluate_binary_expression(
         &mut self,
+        env: &RefCell<Environment>,
         left: Box<Expr>,
         operator: Token,
         right: Box<Expr>,
     ) -> EvaluationResult {
-        let left = self.evaluate(*left);
+        let left = self.evaluate(env, *left);
         if left.is_err() {
             return left;
         }
-        let right = self.evaluate(*right);
+        let right = self.evaluate(env, *right);
         if right.is_err() {
             return right;
         }

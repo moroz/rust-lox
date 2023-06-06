@@ -83,10 +83,34 @@ impl Parser {
     }
 
     fn statement(&mut self) -> ParseResult<Stmt> {
-        if self.match_token(&TokenType::Print) {
-            self.print_statement()
-        } else {
-            self.expr_statement()
+        match self.peek().token_type {
+            TokenType::Print => {
+                self.advance();
+                self.print_statement()
+            }
+            TokenType::LeftBrace => {
+                self.advance();
+                self.parse_block().map(|block| Stmt::Block(block))
+            }
+            _ => self.expr_statement(),
+        }
+    }
+
+    fn parse_block(&mut self) -> ParseResult<Vec<Stmt>> {
+        let mut statements = Vec::new();
+
+        while !self.check(&TokenType::RightBrace) && !self.is_at_end() {
+            match self.declaration() {
+                Ok(stmt) => statements.push(stmt),
+                Err(reason) => {
+                    return Err(reason);
+                }
+            }
+        }
+
+        match self.consume(&TokenType::RightBrace, "Expected '}' after block.") {
+            Ok(_) => Ok(statements),
+            Err(reason) => Err(reason),
         }
     }
 

@@ -1,17 +1,24 @@
 use crate::literal::Literal;
-use std::collections::HashMap;
+use std::{cell::RefCell, collections::HashMap};
 
-pub struct Environment {
+pub struct Environment<'a> {
     values: HashMap<String, Literal>,
-    pub enclosing: Option<Box<Environment>>,
+    pub enclosing: Option<&'a RefCell<Environment<'a>>>,
 }
 
-impl Environment {
+impl<'a> Environment<'a> {
     pub fn new() -> Self {
         Self {
             values: HashMap::new(),
             enclosing: None,
         }
+    }
+
+    pub fn enclosed(enclosing: &'a RefCell<Self>) -> RefCell<Self> {
+        RefCell::new(Self {
+            values: HashMap::new(),
+            enclosing: Some(&enclosing),
+        })
     }
 
     pub fn assign(&mut self, name: impl Into<String>, value: Literal) -> bool {
@@ -21,9 +28,9 @@ impl Environment {
                 self.values.insert(name.into(), value);
                 true
             }
-            None => match &mut self.enclosing {
+            None => match self.enclosing {
                 None => false,
-                Some(env) => env.assign(name, value),
+                Some(env) => env.borrow_mut().assign(name, value),
             },
         }
     }
@@ -32,14 +39,23 @@ impl Environment {
         self.values.insert(name.into(), value);
     }
 
-    pub fn fetch(&self, name: impl Into<String>) -> Option<&Literal> {
+    pub fn get(&self, name: impl Into<String>) -> Option<Literal> {
+        let name: String = name.into();
+        return self.values.get(&name).cloned();
+    }
+
+    pub fn fetch(&self, name: impl Into<String>) -> Option<Literal> {
         let name: String = name.into();
         match self.values.get(&name) {
-            Some(value) => Some(value),
-            None => match &self.enclosing {
+            None => match self.enclosing {
                 None => None,
-                Some(env) => env.fetch(name),
+                Some(env) => {
+                    let env = env.borrow();
+                    let value = env.get(name);
+                    return value;
+                }
             },
+            value => value.cloned(),
         }
     }
 }
