@@ -19,28 +19,28 @@ impl Parser {
         Self { tokens, current: 0 }
     }
 
-    pub fn parse(&mut self) -> Result<Vec<Stmt>, ParseError> {
+    pub fn parse(&mut self) -> Result<Vec<Stmt>, Vec<ParseError>> {
         if self.tokens.len() == 1 {
             return Ok(vec![Stmt::Expression(Expr::Literal(Literal::Nil))]);
         }
 
         let mut program = Vec::new();
+        let mut errors = Vec::new();
         while !self.is_at_end() {
             match self.declaration() {
                 Ok(stmt) => {
                     program.push(stmt);
                 }
                 Err(reason) => {
-                    return Err(reason);
+                    errors.push(reason);
+                    self.synchronize();
                 }
             }
-            // if let Ok(stmt) = self.declaration() {
-            //     program.push(stmt);
-            // } else {
-            //     self.synchronize();
-            // }
         }
-        return Ok(program);
+        if errors.is_empty() {
+            return Ok(program);
+        }
+        return Err(errors);
     }
 
     fn declaration(&mut self) -> ParseResult<Stmt> {
@@ -100,8 +100,55 @@ impl Parser {
                 self.advance();
                 self.parse_block().map(|block| Stmt::Block(block))
             }
+            TokenType::If => {
+                self.advance();
+                self.parse_if()
+            }
             _ => self.expr_statement(),
         }
+    }
+
+    fn parse_if(&mut self) -> ParseResult<Stmt> {
+        match self.consume(&TokenType::LeftParen, "Expected '(' after 'if'.") {
+            Err(reason) => {
+                return Err(reason);
+            }
+            _ => (),
+        }
+        let condition = self.expression();
+        match condition {
+            Err(reason) => {
+                return Err(reason);
+            }
+            _ => (),
+        }
+        let condition = condition.unwrap();
+        match self.consume(&TokenType::RightParen, "Expected ')' after if condition.") {
+            Err(reason) => {
+                return Err(reason);
+            }
+            _ => (),
+        }
+        let then_branch = self.statement();
+        match then_branch {
+            Err(reason) => {
+                return Err(reason);
+            }
+            _ => (),
+        }
+        let then_branch = then_branch.unwrap();
+        if self.match_token(&TokenType::Else) {
+            let else_branch = self.statement();
+            if else_branch.is_err() {
+                return else_branch;
+            }
+            return Ok(Stmt::If(
+                condition,
+                Box::new(then_branch),
+                Some(Box::new(else_branch.unwrap())),
+            ));
+        }
+        return Ok(Stmt::If(condition, Box::new(then_branch), None));
     }
 
     fn parse_block(&mut self) -> ParseResult<Vec<Stmt>> {

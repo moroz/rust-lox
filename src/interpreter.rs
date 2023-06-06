@@ -63,6 +63,9 @@ impl Interpreter {
         match stmt {
             Stmt::Print(expr) => self.evaluate_print(env, expr),
             Stmt::Expression(expr) => self.evaluate(env, expr),
+            Stmt::If(condition, then_branch, else_branch) => {
+                self.evaluate_if(env, condition, then_branch, else_branch)
+            }
             Stmt::Var(identifier, Some(initializer)) => match self.evaluate(env, initializer) {
                 Ok(value) => {
                     env.borrow_mut().define(&identifier.lexeme, value);
@@ -99,6 +102,29 @@ impl Interpreter {
                 Ok(Literal::Nil)
             }
             other => other,
+        }
+    }
+
+    fn evaluate_if(
+        &mut self,
+        env: &RefCell<Environment>,
+        condition: Expr,
+        then_branch: Box<Stmt>,
+        else_branch: Option<Box<Stmt>>,
+    ) -> EvaluationResult {
+        match self.evaluate(env, condition) {
+            Err(reason) => {
+                return Err(reason);
+            }
+            Ok(value) => {
+                if value.is_truthy() {
+                    return self.evaluate_statement(env, *then_branch);
+                }
+                if let Some(else_branch) = else_branch {
+                    return self.evaluate_statement(env, *else_branch);
+                }
+                return Ok(Literal::Nil);
+            }
         }
     }
 
