@@ -139,11 +139,34 @@ impl Parser {
     }
 
     fn expression(&mut self) -> ParseResult<Expr> {
-        self.equality()
+        self.assignment()
+    }
+
+    fn assignment(&mut self) -> ParseResult<Expr> {
+        let expr = self.equality();
+        if expr.is_err() {
+            return expr;
+        }
+
+        if self.match_token(&TokenType::Equal) {
+            let value = self.assignment();
+            if value.is_err() {
+                return value;
+            }
+
+            match expr {
+                Ok(Expr::Var(name)) => {
+                    return Ok(Expr::Assign(name, Box::new(value.unwrap())));
+                }
+                _ => return Err(ParseError("Invalid assignment target.".to_string())),
+            }
+        }
+
+        return expr;
     }
 
     fn equality(&mut self) -> ParseResult<Expr> {
-        let mut expr = self.comparison();
+        let expr = self.comparison();
         if expr.is_err() {
             return expr;
         }
@@ -160,14 +183,13 @@ impl Parser {
                     return Err(reason);
                 }
             }
-            let right = self.comparison();
         }
 
         return Ok(expr);
     }
 
     fn comparison(&mut self) -> ParseResult<Expr> {
-        let mut expr = self.term();
+        let expr = self.term();
         if expr.is_err() {
             return expr;
         }
@@ -195,7 +217,7 @@ impl Parser {
     }
 
     fn term(&mut self) -> ParseResult<Expr> {
-        let mut expr = self.factor();
+        let expr = self.factor();
         if expr.is_err() {
             return expr;
         }
@@ -204,7 +226,6 @@ impl Parser {
         let token_types = vec![TokenType::Minus, TokenType::Plus];
         while self.match_any_token(&token_types) {
             let operator = self.previous().clone();
-            let right = self.factor();
             match self.factor() {
                 Ok(right) => {
                     expr = Expr::Binary(Box::new(expr), operator.to_owned(), Box::new(right));
@@ -219,7 +240,7 @@ impl Parser {
     }
 
     fn factor(&mut self) -> ParseResult<Expr> {
-        let mut expr = self.unary();
+        let expr = self.unary();
         if expr.is_err() {
             return expr;
         }
