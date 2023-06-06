@@ -1,6 +1,7 @@
 use crate::{
-    expr::{Expr, Stmt},
+    expr::Expr,
     literal::Literal,
+    stmt::Stmt,
     token::{Token, TokenType},
 };
 

@@ -13,12 +13,12 @@ mod interpreter;
 mod literal;
 mod parser;
 mod scanner;
+mod stmt;
 mod token;
 
 fn run(env: &RefCell<Environment>, source: String) -> Option<Literal> {
     let mut scanner = Scanner::new(source);
     let tokens = scanner.scan_tokens();
-    let mut interpreter = Interpreter::new();
 
     match tokens {
         Ok(tokens) => {
@@ -28,7 +28,7 @@ fn run(env: &RefCell<Environment>, source: String) -> Option<Literal> {
             match statements {
                 Ok(statements) => {
                     for stmt in statements {
-                        match interpreter.evaluate_statement(&env, stmt) {
+                        match Interpreter::evaluate_statement(&env, stmt) {
                             Err(reason) => {
                                 println!("{:?}", reason);
                                 break;
