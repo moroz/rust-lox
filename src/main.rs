@@ -28,7 +28,7 @@ fn run(env: &RefCell<Environment>, source: String) -> Option<Literal> {
             match statements {
                 Ok(statements) => {
                     for stmt in statements {
-                        match Interpreter::evaluate_statement(&env, stmt) {
+                        match Interpreter::execute(&env, &stmt) {
                             Err(reason) => {
                                 println!("{:?}", reason);
                                 break;

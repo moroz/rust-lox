@@ -13,7 +13,7 @@ use crate::{
 
 pub type EvaluationResult = Result<Literal, LoxError>;
 
-fn evaluate_arithmetic(operator: Token, left: Literal, right: Literal) -> EvaluationResult {
+fn evaluate_arithmetic(operator: &Token, left: &Literal, right: &Literal) -> EvaluationResult {
     match (left, right) {
         (Literal::Number(left), Literal::Number(right)) => match operator.token_type {
             TokenType::Plus => Ok(Literal::Number(left + right)),
@@ -31,7 +31,7 @@ fn evaluate_arithmetic(operator: Token, left: Literal, right: Literal) -> Evalua
     }
 }
 
-fn evaluate_comparison(operator: Token, left: Literal, right: Literal) -> EvaluationResult {
+fn evaluate_comparison(operator: &Token, left: &Literal, right: &Literal) -> EvaluationResult {
     match (left, right) {
         (Literal::Number(left), Literal::Number(right)) => match operator.token_type {
             TokenType::Less => Ok(Literal::Boolean(left < right)),
@@ -52,14 +52,14 @@ fn evaluate_comparison(operator: Token, left: Literal, right: Literal) -> Evalua
 pub struct Interpreter;
 
 impl Interpreter {
-    pub fn evaluate_statement<'b>(env: &RefCell<Environment>, stmt: Stmt) -> EvaluationResult {
+    pub fn execute<'b>(env: &RefCell<Environment>, stmt: &Stmt) -> EvaluationResult {
         match stmt {
-            Stmt::Print(expr) => Self::evaluate_print(env, expr),
+            Stmt::Print(expr) => Self::execute_print(env, expr),
             Stmt::Expression(expr) => Self::evaluate(env, expr),
             Stmt::If(condition, then_branch, else_branch) => {
-                Self::evaluate_if(env, condition, then_branch, else_branch)
+                Self::execute_if(env, condition, then_branch, else_branch)
             }
-            Stmt::While(condition, body) => Self::evaluate_while(env, condition, body),
+            Stmt::While(condition, body) => Self::execute_while(env, condition, body),
             Stmt::Var(identifier, Some(initializer)) => match Self::evaluate(env, initializer) {
                 Ok(value) => {
                     env.borrow_mut().define(&identifier.lexeme, value);
@@ -75,7 +75,7 @@ impl Interpreter {
                 env.borrow_mut().add_frame();
 
                 for stmt in statements {
-                    match Self::evaluate_statement(env, stmt) {
+                    match Self::execute(env, &stmt) {
                         Ok(_) => (),
                         Err(reason) => {
                             env.borrow_mut().pop_frame();
@@ -89,43 +89,44 @@ impl Interpreter {
         }
     }
 
-    fn evaluate_print(env: &RefCell<Environment>, expr: Expr) -> EvaluationResult {
+    fn execute_print(env: &RefCell<Environment>, expr: &Expr) -> EvaluationResult {
         let value = Self::evaluate(env, expr)?;
         println!("{}", value);
         Ok(Literal::Nil)
     }
 
-    fn evaluate_if(
+    fn execute_if(
         env: &RefCell<Environment>,
-        condition: Expr,
-        then_branch: Box<Stmt>,
-        else_branch: Option<Box<Stmt>>,
+        condition: &Expr,
+        then_branch: &Box<Stmt>,
+        else_branch: &Option<Box<Stmt>>,
     ) -> EvaluationResult {
         let value = Self::evaluate(env, condition)?;
         if value.is_truthy() {
-            return Self::evaluate_statement(env, *then_branch);
+            return Self::execute(env, &*then_branch);
         }
         if let Some(else_branch) = else_branch {
-            return Self::evaluate_statement(env, *else_branch);
+            return Self::execute(env, &*else_branch);
         }
         return Ok(Literal::Nil);
     }
 
-    fn evaluate_while(
+    fn execute_while(
         env: &RefCell<Environment>,
-        condition: Expr,
-        body: Box<Stmt>,
+        condition: &Expr,
+        body: &Box<Stmt>,
     ) -> EvaluationResult {
-        while Self::evaluate(env, condition.clone())?.is_truthy() {
-            Self::evaluate_statement(env, *body.clone())?;
+        let body = &*body;
+        while Self::evaluate(env, condition)?.is_truthy() {
+            Self::execute(env, body)?;
         }
         Ok(Literal::Nil)
     }
 
-    pub fn evaluate(env: &RefCell<Environment>, expr: Expr) -> EvaluationResult {
+    pub fn evaluate(env: &RefCell<Environment>, expr: &Expr) -> EvaluationResult {
         match expr {
-            Expr::Literal(value) => Ok(value.to_owned()),
-            Expr::Grouping(expr) => Self::evaluate(env, *expr),
+            Expr::Literal(value) => Ok(value.clone()),
+            Expr::Grouping(expr) => Self::evaluate(env, expr),
             Expr::Unary(operator, right) => Self::evaluate_unary_expression(env, operator, right),
             Expr::Binary(left, operator, right) => {
                 Self::evaluate_binary_expression(env, left, operator, right)
@@ -138,7 +139,7 @@ impl Interpreter {
         }
     }
 
-    fn evaluate_var(env: &RefCell<Environment>, identifier: Token) -> EvaluationResult {
+    fn evaluate_var(env: &RefCell<Environment>, identifier: &Token) -> EvaluationResult {
         match env.borrow().fetch(&identifier.lexeme) {
             Some(value) => Ok(value.to_owned()),
             None => Err(LoxError::new(
@@ -151,11 +152,11 @@ impl Interpreter {
 
     fn evaluate_logical(
         env: &RefCell<Environment>,
-        left: Box<Expr>,
-        operator: Token,
-        right: Box<Expr>,
+        left: &Box<Expr>,
+        operator: &Token,
+        right: &Box<Expr>,
     ) -> EvaluationResult {
-        let value = Self::evaluate(env, *left)?;
+        let value = Self::evaluate(env, &*left)?;
         match operator.token_type {
             TokenType::Or => {
                 if value.is_truthy() {
@@ -168,15 +169,15 @@ impl Interpreter {
                 }
             }
         }
-        return Self::evaluate(env, *right);
+        return Self::evaluate(env, &right);
     }
 
     fn evaluate_assignment(
         env: &RefCell<Environment>,
-        identifier: Token,
-        expr: Box<Expr>,
+        identifier: &Token,
+        expr: &Box<Expr>,
     ) -> EvaluationResult {
-        let value = Self::evaluate(env, *expr)?;
+        let value = Self::evaluate(env, &*expr)?;
         if env.borrow_mut().assign(&identifier.lexeme, value.clone()) {
             Ok(value)
         } else {
@@ -190,10 +191,10 @@ impl Interpreter {
 
     fn evaluate_unary_expression(
         env: &RefCell<Environment>,
-        operator: Token,
-        right: Box<Expr>,
+        operator: &Token,
+        right: &Box<Expr>,
     ) -> EvaluationResult {
-        let right = Self::evaluate(env, *right)?;
+        let right = Self::evaluate(env, &*right)?;
         match operator.token_type {
             TokenType::Minus => match right {
                 Literal::Number(value) => Ok(Literal::Number(-value)),
@@ -212,12 +213,12 @@ impl Interpreter {
 
     fn evaluate_binary_expression(
         env: &RefCell<Environment>,
-        left: Box<Expr>,
-        operator: Token,
-        right: Box<Expr>,
+        left: &Box<Expr>,
+        operator: &Token,
+        right: &Box<Expr>,
     ) -> EvaluationResult {
-        let left = Self::evaluate(env, *left)?;
-        let right = Self::evaluate(env, *right)?;
+        let left = Self::evaluate(env, &*left)?;
+        let right = Self::evaluate(env, &*right)?;
 
         match operator.token_type {
             TokenType::Plus => match (&left, &right) {
@@ -225,15 +226,15 @@ impl Interpreter {
                     let concatenated = format!("{}{}", left, right);
                     return Ok(Literal::String(concatenated));
                 }
-                _ => evaluate_arithmetic(operator, left, right),
+                _ => evaluate_arithmetic(operator, &left, &right),
             },
             TokenType::Minus | TokenType::Star | TokenType::Slash => {
-                evaluate_arithmetic(operator, left, right)
+                evaluate_arithmetic(operator, &left, &right)
             }
             TokenType::Greater
             | TokenType::GreaterEqual
             | TokenType::Less
-            | TokenType::LessEqual => evaluate_comparison(operator, left, right),
+            | TokenType::LessEqual => evaluate_comparison(operator, &left, &right),
             TokenType::EqualEqual => Ok(Literal::Boolean(left == right)),
             TokenType::BangEqual => Ok(Literal::Boolean(left != right)),
             _ => panic!(),
