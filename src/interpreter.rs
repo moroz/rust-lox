@@ -143,6 +143,7 @@ impl Interpreter {
             Expr::Var(identifier) => self.evaluate_var(identifier),
             Expr::Assign(identifier, expr) => self.evaluate_assignment(identifier, expr),
             Expr::Logical(left, operator, right) => self.evaluate_logical(left, operator, right),
+            Expr::Call(callee, _paren, arguments) => self.evaluate_call(callee, arguments),
         }
     }
 
@@ -155,6 +156,10 @@ impl Interpreter {
                 DetailedErrorType::UndeclaredIdentifier,
             )),
         }
+    }
+
+    fn evaluate_call(&mut self, callee: &Box<Expr>, arguments: &Vec<Expr>) -> EvaluationResult {
+        unimplemented!()
     }
 
     fn evaluate_logical(

@@ -6,6 +6,7 @@ use std::fmt::Debug;
 pub enum Expr {
     Assign(Token, Box<Expr>),
     Binary(Box<Expr>, Token, Box<Expr>),
+    Call(Box<Expr>, Token, Vec<Expr>),
     Grouping(Box<Expr>),
     Literal(Literal),
     Logical(Box<Expr>, Token, Box<Expr>),
@@ -36,6 +37,11 @@ impl Debug for Expr {
             }
             Self::Logical(left, operator, right) => {
                 write!(f, "({} {:?} {:?})", operator.lexeme, left, right)
+            }
+            Self::Call(callee, _, arguments) => {
+                let args: Vec<_> = arguments.iter().map(|arg| format!("{:?}", arg)).collect();
+                let args = args.join(" ");
+                write!(f, "({:?} {:?})", callee, args)
             }
         }
     }
