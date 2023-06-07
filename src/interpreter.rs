@@ -1,6 +1,6 @@
+use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::{SystemTime, UNIX_EPOCH};
-use std::{cell::RefCell, thread::park_timeout_ms};
 
 use crate::function::Function;
 use crate::{
@@ -68,7 +68,7 @@ impl Interpreter {
                     SystemTime::now()
                         .duration_since(UNIX_EPOCH)
                         .unwrap()
-                        .as_millis() as f64,
+                        .as_secs_f64(),
                 )
             }),
         });
@@ -188,12 +188,23 @@ impl Interpreter {
             args.push(self.evaluate(arg)?);
         }
 
+        let arity = args.len();
+
         match callee {
-            Literal::Function(fun) => fun.call(self, &args),
+            Literal::Function(fun) => {
+                if fun.arity() != arity {
+                    return Err(LoxError::new(
+                        paren,
+                        LoxErrorType::RuntimeError,
+                        DetailedErrorType::InvalidArity,
+                    ));
+                }
+                fun.call(self, &args)
+            }
             _ => Err(LoxError::new(
                 paren,
                 LoxErrorType::RuntimeError,
-                DetailedErrorType::InvalidArity,
+                DetailedErrorType::NotCallable,
             )),
         }
     }

@@ -9,9 +9,9 @@ pub enum LoxErrorType {
 #[derive(Clone, Debug, PartialEq)]
 pub enum DetailedErrorType {
     ExpectedNumber,
-    ExpectedNumberOrString,
     UndeclaredIdentifier,
     InvalidArity,
+    NotCallable,
 }
 
 #[derive(Clone, Debug)]

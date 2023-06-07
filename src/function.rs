@@ -1,5 +1,5 @@
 use crate::{
-    interpreter::{self, EvaluationResult, Interpreter},
+    interpreter::{EvaluationResult, Interpreter},
     literal::Literal,
 };
 
@@ -12,6 +12,12 @@ pub enum Function {
 }
 
 impl Function {
+    pub fn arity(&self) -> usize {
+        match self {
+            Self::Native { arity, .. } => arity.clone(),
+        }
+    }
+
     pub fn call(
         &self,
         _interpreter: &mut Interpreter,
