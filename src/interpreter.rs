@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::rc::Rc;
 
 use crate::{
     environment::Environment,
@@ -49,95 +50,104 @@ fn evaluate_comparison(operator: &Token, left: &Literal, right: &Literal) -> Eva
     }
 }
 
-pub struct Interpreter;
+pub struct Interpreter {
+    pub globals: Rc<RefCell<Environment>>,
+    environment: Rc<RefCell<Environment>>,
+}
 
 impl Interpreter {
-    pub fn execute<'b>(env: &RefCell<Environment>, stmt: &Stmt) -> EvaluationResult {
+    pub fn new() -> Self {
+        let globals = Rc::new(RefCell::new(Environment::new()));
+        Self {
+            globals: Rc::clone(&globals),
+            environment: Rc::clone(&globals),
+        }
+    }
+
+    pub fn execute<'b>(&mut self, stmt: &Stmt) -> EvaluationResult {
         match stmt {
-            Stmt::Print(expr) => Self::execute_print(env, expr),
-            Stmt::Expression(expr) => Self::evaluate(env, expr),
+            Stmt::Print(expr) => self.execute_print(expr),
+            Stmt::Expression(expr) => self.evaluate(expr),
             Stmt::If(condition, then_branch, else_branch) => {
-                Self::execute_if(env, condition, then_branch, else_branch)
+                self.execute_if(condition, then_branch, else_branch)
             }
-            Stmt::While(condition, body) => Self::execute_while(env, condition, body),
+            Stmt::While(condition, body) => self.execute_while(condition, body),
             Stmt::Var(identifier, initializer) => {
                 let value = match initializer {
-                    Some(initializer) => Self::evaluate(env, initializer)?,
+                    Some(initializer) => self.evaluate(initializer)?,
                     _ => Literal::Nil,
                 };
-                env.borrow_mut().define(&identifier.lexeme, value);
+                self.environment
+                    .borrow_mut()
+                    .define(&identifier.lexeme, value);
                 Ok(Literal::Nil)
             }
             Stmt::Block(statements) => {
-                env.borrow_mut().add_frame();
+                let previous = self.environment.clone();
+                let env = Environment::enclose(&self.environment);
+                self.environment = Rc::new(RefCell::new(env));
 
                 for stmt in statements {
-                    match Self::execute(env, &stmt) {
+                    match self.execute(&stmt) {
                         Ok(_) => (),
                         Err(reason) => {
-                            env.borrow_mut().pop_frame();
+                            self.environment = previous;
                             return Err(reason);
                         }
                     }
                 }
-                env.borrow_mut().pop_frame();
+                self.environment = previous;
                 return Ok(Literal::Nil);
             }
         }
     }
 
-    fn execute_print(env: &RefCell<Environment>, expr: &Expr) -> EvaluationResult {
-        let value = Self::evaluate(env, expr)?;
+    fn execute_print(&mut self, expr: &Expr) -> EvaluationResult {
+        let value = self.evaluate(expr)?;
         println!("{}", value);
         Ok(Literal::Nil)
     }
 
     fn execute_if(
-        env: &RefCell<Environment>,
+        &mut self,
         condition: &Expr,
         then_branch: &Box<Stmt>,
         else_branch: &Option<Box<Stmt>>,
     ) -> EvaluationResult {
-        let value = Self::evaluate(env, condition)?;
+        let value = self.evaluate(condition)?;
         if value.is_truthy() {
-            return Self::execute(env, &*then_branch);
+            return self.execute(&*then_branch);
         }
         if let Some(else_branch) = else_branch {
-            return Self::execute(env, &*else_branch);
+            return self.execute(&*else_branch);
         }
         return Ok(Literal::Nil);
     }
 
-    fn execute_while(
-        env: &RefCell<Environment>,
-        condition: &Expr,
-        body: &Box<Stmt>,
-    ) -> EvaluationResult {
+    fn execute_while(&mut self, condition: &Expr, body: &Box<Stmt>) -> EvaluationResult {
         let body = &*body;
-        while Self::evaluate(env, condition)?.is_truthy() {
-            Self::execute(env, body)?;
+        while self.evaluate(condition)?.is_truthy() {
+            self.execute(body)?;
         }
         Ok(Literal::Nil)
     }
 
-    pub fn evaluate(env: &RefCell<Environment>, expr: &Expr) -> EvaluationResult {
+    pub fn evaluate(&mut self, expr: &Expr) -> EvaluationResult {
         match expr {
             Expr::Literal(value) => Ok(value.clone()),
-            Expr::Grouping(expr) => Self::evaluate(env, expr),
-            Expr::Unary(operator, right) => Self::evaluate_unary_expression(env, operator, right),
+            Expr::Grouping(expr) => self.evaluate(expr),
+            Expr::Unary(operator, right) => self.evaluate_unary_expression(operator, right),
             Expr::Binary(left, operator, right) => {
-                Self::evaluate_binary_expression(env, left, operator, right)
+                self.evaluate_binary_expression(left, operator, right)
             }
-            Expr::Var(identifier) => Self::evaluate_var(env, identifier),
-            Expr::Assign(identifier, expr) => Self::evaluate_assignment(env, identifier, expr),
-            Expr::Logical(left, operator, right) => {
-                Self::evaluate_logical(env, left, operator, right)
-            }
+            Expr::Var(identifier) => self.evaluate_var(identifier),
+            Expr::Assign(identifier, expr) => self.evaluate_assignment(identifier, expr),
+            Expr::Logical(left, operator, right) => self.evaluate_logical(left, operator, right),
         }
     }
 
-    fn evaluate_var(env: &RefCell<Environment>, identifier: &Token) -> EvaluationResult {
-        match env.borrow().fetch(&identifier.lexeme) {
+    fn evaluate_var(&mut self, identifier: &Token) -> EvaluationResult {
+        match self.environment.borrow().fetch(&identifier.lexeme) {
             Some(value) => Ok(value.to_owned()),
             None => Err(LoxError::new(
                 &identifier,
@@ -148,12 +158,12 @@ impl Interpreter {
     }
 
     fn evaluate_logical(
-        env: &RefCell<Environment>,
+        &mut self,
         left: &Box<Expr>,
         operator: &Token,
         right: &Box<Expr>,
     ) -> EvaluationResult {
-        let value = Self::evaluate(env, &*left)?;
+        let value = self.evaluate(&*left)?;
         match operator.token_type {
             TokenType::Or => {
                 if value.is_truthy() {
@@ -166,16 +176,16 @@ impl Interpreter {
                 }
             }
         }
-        return Self::evaluate(env, &right);
+        return self.evaluate(&right);
     }
 
-    fn evaluate_assignment(
-        env: &RefCell<Environment>,
-        identifier: &Token,
-        expr: &Box<Expr>,
-    ) -> EvaluationResult {
-        let value = Self::evaluate(env, &*expr)?;
-        if env.borrow_mut().assign(&identifier.lexeme, value.clone()) {
+    fn evaluate_assignment(&mut self, identifier: &Token, expr: &Box<Expr>) -> EvaluationResult {
+        let value = self.evaluate(&*expr)?;
+        if self
+            .environment
+            .borrow_mut()
+            .assign(&identifier.lexeme, value.clone())
+        {
             Ok(value)
         } else {
             Err(LoxError::new(
@@ -187,11 +197,11 @@ impl Interpreter {
     }
 
     fn evaluate_unary_expression(
-        env: &RefCell<Environment>,
+        &mut self,
         operator: &Token,
         right: &Box<Expr>,
     ) -> EvaluationResult {
-        let right = Self::evaluate(env, &*right)?;
+        let right = self.evaluate(&*right)?;
         match operator.token_type {
             TokenType::Minus => match right {
                 Literal::Number(value) => Ok(Literal::Number(-value)),
@@ -209,13 +219,13 @@ impl Interpreter {
     }
 
     fn evaluate_binary_expression(
-        env: &RefCell<Environment>,
+        &mut self,
         left: &Box<Expr>,
         operator: &Token,
         right: &Box<Expr>,
     ) -> EvaluationResult {
-        let left = Self::evaluate(env, &*left)?;
-        let right = Self::evaluate(env, &*right)?;
+        let left = self.evaluate(&*left)?;
+        let right = self.evaluate(&*right)?;
 
         match operator.token_type {
             TokenType::Plus => match (&left, &right) {

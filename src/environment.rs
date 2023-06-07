@@ -1,55 +1,60 @@
 use crate::literal::Literal;
-use std::collections::HashMap;
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 pub struct Environment {
-    frames: Vec<HashMap<String, Literal>>,
+    values: HashMap<String, Literal>,
+    enclosing: Option<Rc<RefCell<Environment>>>,
 }
 
 impl Environment {
     pub fn new() -> Self {
         Self {
-            frames: vec![HashMap::new()],
+            values: HashMap::new(),
+            enclosing: None,
         }
     }
 
-    pub fn add_frame(&mut self) {
-        self.frames.push(HashMap::new());
-    }
-
-    pub fn pop_frame(&mut self) {
-        self.frames.pop();
+    pub fn enclose(enclosing: &Rc<RefCell<Self>>) -> Self {
+        Self {
+            values: HashMap::new(),
+            enclosing: Some(Rc::clone(enclosing)),
+        }
     }
 
     pub fn assign(&mut self, name: impl Into<String>, value: Literal) -> bool {
         let name: String = name.into();
-        for frame in self.frames.iter_mut().rev() {
-            match frame.get(&name) {
-                Some(_) => {
-                    frame.insert(name, value);
-                    return true;
-                }
-                None => (),
+        match self.values.get(&name) {
+            Some(_) => {
+                self.values.insert(name, value);
+                return true;
             }
+            None => match self.enclosing.clone() {
+                Some(enclosing) => return enclosing.borrow_mut().assign(&name, value),
+                None => {
+                    return false;
+                }
+            },
         }
-        return false;
     }
 
     pub fn define(&mut self, name: impl Into<String>, value: Literal) {
-        self.frames
-            .iter_mut()
-            .last()
-            .unwrap()
-            .insert(name.into(), value);
+        self.values.insert(name.into(), value);
     }
 
     pub fn fetch(&self, name: impl Into<String>) -> Option<Literal> {
         let name: String = name.into();
-        for frame in self.frames.iter().rev() {
-            match frame.get(&name) {
-                Some(value) => return Some(value.clone()),
-                None => (),
+        match self.values.get(&name) {
+            Some(value) => {
+                return Some(value.clone());
             }
+            None => match self.enclosing.clone() {
+                Some(enclosing) => {
+                    return enclosing.borrow_mut().fetch(&name);
+                }
+                None => {
+                    return None;
+                }
+            },
         }
-        return None;
     }
 }

@@ -1,10 +1,9 @@
-use environment::Environment;
 use interpreter::Interpreter;
 use literal::Literal;
 use parser::Parser;
 
 use crate::scanner::Scanner;
-use std::{cell::RefCell, env, fs, io::Write};
+use std::{env, fs, io::Write};
 
 mod environment;
 mod errors;
@@ -16,7 +15,7 @@ mod scanner;
 mod stmt;
 mod token;
 
-fn run(env: &RefCell<Environment>, source: String) -> Option<Literal> {
+fn run(interpreter: &mut Interpreter, source: String) -> Option<Literal> {
     let mut scanner = Scanner::new(source);
     let tokens = scanner.scan_tokens();
 
@@ -28,7 +27,7 @@ fn run(env: &RefCell<Environment>, source: String) -> Option<Literal> {
             match statements {
                 Ok(statements) => {
                     for stmt in statements {
-                        match Interpreter::execute(&env, &stmt) {
+                        match interpreter.execute(&stmt) {
                             Err(reason) => {
                                 println!("{:?}", reason);
                                 break;
@@ -55,13 +54,15 @@ fn run(env: &RefCell<Environment>, source: String) -> Option<Literal> {
     }
 }
 
-fn run_file(env: &RefCell<Environment>, filename: String) {
+fn run_file(filename: String) {
     let contents = fs::read_to_string(filename).unwrap();
-    run(env, contents);
+    let mut interpreter = Interpreter::new();
+    run(&mut interpreter, contents);
 }
 
-fn run_prompt(env: &RefCell<Environment>) {
+fn run_prompt() {
     let mut buffer = String::new();
+    let mut interpreter = Interpreter::new();
 
     loop {
         print!("> ");
@@ -71,7 +72,7 @@ fn run_prompt(env: &RefCell<Environment>) {
                 break;
             }
             Ok(_) => {
-                match run(env, buffer.clone()) {
+                match run(&mut interpreter, buffer.clone()) {
                     Some(value) => {
                         println!("=> {}", value);
                     }
@@ -92,10 +93,8 @@ fn main() {
         std::process::exit(64);
     } else if env::args().len() == 2 {
         let args: Vec<_> = env::args().collect();
-        let env = RefCell::new(Environment::new());
-        run_file(&env, args[1].clone());
+        run_file(args[1].clone());
     } else {
-        let env = RefCell::new(Environment::new());
-        run_prompt(&env);
+        run_prompt();
     }
 }
