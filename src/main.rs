@@ -8,6 +8,7 @@ use std::{env, fs, io::Write};
 mod environment;
 mod errors;
 mod expr;
+mod function;
 mod interpreter;
 mod literal;
 mod parser;

@@ -1,6 +1,8 @@
-use std::cell::RefCell;
 use std::rc::Rc;
+use std::time::{SystemTime, UNIX_EPOCH};
+use std::{cell::RefCell, thread::park_timeout_ms};
 
+use crate::function::Function;
 use crate::{
     environment::Environment,
     errors::DetailedErrorType,
@@ -58,6 +60,21 @@ pub struct Interpreter {
 impl Interpreter {
     pub fn new() -> Self {
         let globals = Rc::new(RefCell::new(Environment::new()));
+
+        let clock = Literal::Function(Function::Native {
+            arity: 0,
+            body: Box::new(|_args: &Vec<Literal>| {
+                Literal::Number(
+                    SystemTime::now()
+                        .duration_since(UNIX_EPOCH)
+                        .unwrap()
+                        .as_millis() as f64,
+                )
+            }),
+        });
+
+        globals.borrow_mut().define("clock".to_owned(), clock);
+
         Self {
             globals: Rc::clone(&globals),
             environment: Rc::clone(&globals),
@@ -143,7 +160,7 @@ impl Interpreter {
             Expr::Var(identifier) => self.evaluate_var(identifier),
             Expr::Assign(identifier, expr) => self.evaluate_assignment(identifier, expr),
             Expr::Logical(left, operator, right) => self.evaluate_logical(left, operator, right),
-            Expr::Call(callee, _paren, arguments) => self.evaluate_call(callee, arguments),
+            Expr::Call(callee, paren, arguments) => self.evaluate_call(callee, paren, arguments),
         }
     }
 
@@ -158,8 +175,27 @@ impl Interpreter {
         }
     }
 
-    fn evaluate_call(&mut self, callee: &Box<Expr>, arguments: &Vec<Expr>) -> EvaluationResult {
-        unimplemented!()
+    fn evaluate_call(
+        &mut self,
+        callee: &Box<Expr>,
+        paren: &Token,
+        arguments: &Vec<Expr>,
+    ) -> EvaluationResult {
+        let callee = self.evaluate(&callee)?;
+        let mut args = Vec::new();
+
+        for arg in arguments {
+            args.push(self.evaluate(arg)?);
+        }
+
+        match callee {
+            Literal::Function(fun) => fun.call(self, &args),
+            _ => Err(LoxError::new(
+                paren,
+                LoxErrorType::RuntimeError,
+                DetailedErrorType::InvalidArity,
+            )),
+        }
     }
 
     fn evaluate_logical(

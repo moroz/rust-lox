@@ -11,6 +11,7 @@ pub enum DetailedErrorType {
     ExpectedNumber,
     ExpectedNumberOrString,
     UndeclaredIdentifier,
+    InvalidArity,
 }
 
 #[derive(Clone, Debug)]

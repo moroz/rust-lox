@@ -1,7 +1,10 @@
 use std::fmt::{Debug, Display};
 
+use crate::function::Function;
+
 #[derive(Clone, PartialEq)]
 pub enum Literal {
+    Function(Function),
     String(String),
     Number(f64),
     Boolean(bool),
@@ -23,6 +26,9 @@ impl Debug for Literal {
             Self::Nil => {
                 write!(f, "nil")
             }
+            Self::Function(_) => {
+                write!(f, "<native fn>")
+            }
         }
     }
 }
@@ -41,6 +47,9 @@ impl Display for Literal {
             }
             Self::Nil => {
                 write!(f, "nil")
+            }
+            Self::Function(_) => {
+                write!(f, "<native fn>")
             }
         }
     }
