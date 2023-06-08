@@ -10,6 +10,7 @@ pub enum Stmt {
     Block(Vec<Stmt>),
     If(Expr, Box<Stmt>, Option<Box<Stmt>>),
     While(Expr, Box<Stmt>),
+    Function(Token, Vec<Token>, Vec<Stmt>),
 }
 
 impl Debug for Stmt {
@@ -48,6 +49,14 @@ impl Debug for Stmt {
             },
             Self::While(condition, body) => {
                 write!(f, "(while {:?} {:?})", condition, body)
+            }
+            Self::Function(name, params, body) => {
+                let params: Vec<_> = params.iter().map(|param| param.lexeme.clone()).collect();
+                let params = params.join(", ");
+                let body: Vec<_> = body.iter().map(|stmt| format!("{:?}", stmt)).collect();
+                let body = body.join(" ");
+
+                write!(f, "(fun {} ({}) {})", name.lexeme, params, body)
             }
         }
     }

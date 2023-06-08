@@ -45,10 +45,16 @@ impl Parser {
     }
 
     fn declaration(&mut self) -> ParseResult<Stmt> {
-        let result = if self.match_token(&TokenType::Var) {
-            self.var_declaration()
-        } else {
-            self.statement()
+        let result = match self.peek().token_type {
+            TokenType::Fun => {
+                self.advance();
+                self.function_declaration("function")
+            }
+            TokenType::Var => {
+                self.advance();
+                self.var_declaration()
+            }
+            _ => self.statement(),
         };
 
         match result {
@@ -56,6 +62,46 @@ impl Parser {
             Err(reason) => {
                 self.synchronize();
                 Err(reason)
+            }
+        }
+    }
+
+    fn function_declaration(&mut self, kind: impl Into<String>) -> ParseResult<Stmt> {
+        let kind = kind.into();
+        let name = self.consume_identifier(format!("Expected {} name.", kind).as_str())?;
+        let mut params = Vec::new();
+        if !self.check(&TokenType::RightParen) {
+            loop {
+                params.push(self.consume_identifier("Expected parameter name.")?);
+                if params.len() >= 255 {
+                    return Err(ParseError(format!(
+                        "A {} cannot have more than 255 parameters.",
+                        kind
+                    )));
+                }
+                if !self.match_token(&TokenType::Comma) {
+                    break;
+                }
+            }
+        }
+        self.consume(&TokenType::RightParen, "Expected ')' after parameter list.")?;
+
+        self.consume(
+            &TokenType::LeftBrace,
+            format!("Expected '{{' before {} body.", kind).as_str(),
+        )?;
+
+        let body = self.parse_block()?;
+
+        Ok(Stmt::Function(name, params, body))
+    }
+
+    fn consume_identifier(&mut self, msg: &str) -> ParseResult<Token> {
+        let token = self.peek();
+        match token.token_type {
+            TokenType::Identifier(_) => return Ok(self.advance().clone()),
+            _ => {
+                return Err(ParseError(msg.to_owned()));
             }
         }
     }

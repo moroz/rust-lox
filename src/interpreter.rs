@@ -89,16 +89,8 @@ impl Interpreter {
                 self.execute_if(condition, then_branch, else_branch)
             }
             Stmt::While(condition, body) => self.execute_while(condition, body),
-            Stmt::Var(identifier, initializer) => {
-                let value = match initializer {
-                    Some(initializer) => self.evaluate(initializer)?,
-                    _ => Literal::Nil,
-                };
-                self.environment
-                    .borrow_mut()
-                    .define(&identifier.lexeme, value);
-                Ok(Literal::Nil)
-            }
+            Stmt::Var(identifier, initializer) => self.define_var(identifier, initializer),
+            Stmt::Function(name, params, body) => self.define_function(name, params, body),
             Stmt::Block(statements) => {
                 let previous = self.environment.clone();
                 let env = Environment::enclose(&self.environment);
@@ -147,6 +139,26 @@ impl Interpreter {
             self.execute(body)?;
         }
         Ok(Literal::Nil)
+    }
+
+    fn define_var(&mut self, identifier: &Token, initializer: &Option<Expr>) -> EvaluationResult {
+        let value = match initializer {
+            Some(initializer) => self.evaluate(initializer)?,
+            _ => Literal::Nil,
+        };
+        self.environment
+            .borrow_mut()
+            .define(&identifier.lexeme, value);
+        Ok(Literal::Nil)
+    }
+
+    fn define_function(
+        &mut self,
+        name: &Token,
+        params: &Vec<Token>,
+        body: &Vec<Stmt>,
+    ) -> EvaluationResult {
+        unimplemented!()
     }
 
     pub fn evaluate(&mut self, expr: &Expr) -> EvaluationResult {
