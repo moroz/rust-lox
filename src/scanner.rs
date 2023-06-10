@@ -84,7 +84,7 @@ impl Scanner {
 
     fn add_token(&mut self, token_type: TokenType) {
         let lexeme = self.get_current_lexeme();
-        let token = Token::new(token_type, lexeme, self.line);
+        let token = Token::new(token_type, lexeme, self.line, self.current);
         self.tokens.push(token);
     }
 

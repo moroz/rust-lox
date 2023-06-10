@@ -1,5 +1,5 @@
 use core::fmt;
-use std::fmt::Display;
+use std::{fmt::Display, hash::Hash, hash::Hasher};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TokenType {
@@ -52,11 +52,20 @@ pub enum TokenType {
     EOF,
 }
 
-#[derive(Debug, Clone)]
+impl Eq for TokenType {}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Token {
     pub token_type: TokenType,
     pub lexeme: String,
     pub line: usize,
+    pub offset: usize,
+}
+
+impl Hash for Token {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.offset.hash(state);
+    }
 }
 
 impl Display for Token {
@@ -66,11 +75,12 @@ impl Display for Token {
 }
 
 impl Token {
-    pub fn new(token_type: TokenType, lexeme: String, line: usize) -> Self {
+    pub fn new(token_type: TokenType, lexeme: String, line: usize, offset: usize) -> Self {
         Self {
             token_type,
             lexeme,
             line,
+            offset,
         }
     }
 

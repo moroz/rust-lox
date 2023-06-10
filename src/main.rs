@@ -12,6 +12,7 @@ mod function;
 mod interpreter;
 mod literal;
 mod parser;
+mod resolver;
 mod scanner;
 mod stmt;
 mod token;
