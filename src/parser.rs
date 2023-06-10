@@ -77,6 +77,10 @@ impl Parser {
     fn function_declaration(&mut self, kind: impl Into<String>) -> ParseResult<Stmt> {
         let kind = kind.into();
         let name = self.consume_identifier(format!("Expected {} name.", kind).as_str())?;
+        self.consume(
+            &TokenType::LeftParen,
+            format!("Expected '(' after {} name.", kind).as_str(),
+        )?;
         let mut params = Vec::new();
         if !self.check(&TokenType::RightParen) {
             loop {

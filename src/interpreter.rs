@@ -92,23 +92,31 @@ impl Interpreter {
             Stmt::Var(identifier, initializer) => self.define_var(identifier, initializer),
             Stmt::Function(name, params, body) => self.define_function(name, params, body),
             Stmt::Block(statements) => {
-                let previous = self.environment.clone();
                 let env = Environment::enclose(&self.environment);
-                self.environment = Rc::new(RefCell::new(env));
-
-                for stmt in statements {
-                    match self.execute(&stmt) {
-                        Ok(_) => (),
-                        Err(reason) => {
-                            self.environment = previous;
-                            return Err(reason);
-                        }
-                    }
-                }
-                self.environment = previous;
-                return Ok(Literal::Nil);
+                self.execute_block(statements, Rc::new(RefCell::new(env)))
             }
         }
+    }
+
+    pub fn execute_block(
+        &mut self,
+        statements: &Vec<Stmt>,
+        env: Rc<RefCell<Environment>>,
+    ) -> EvaluationResult {
+        let previous = self.environment.clone();
+        self.environment = env;
+
+        for stmt in statements {
+            match self.execute(&stmt) {
+                Ok(_) => (),
+                Err(reason) => {
+                    self.environment = previous;
+                    return Err(reason);
+                }
+            }
+        }
+        self.environment = previous;
+        return Ok(Literal::Nil);
     }
 
     fn execute_print(&mut self, expr: &Expr) -> EvaluationResult {
@@ -158,7 +166,15 @@ impl Interpreter {
         params: &Vec<Token>,
         body: &Vec<Stmt>,
     ) -> EvaluationResult {
-        unimplemented!()
+        self.environment.borrow_mut().define(
+            name.lexeme.clone(),
+            Literal::Function(Function::Lox {
+                arity: params.len(),
+                params: Box::new(params.clone()),
+                body: Box::new(body.clone()),
+            }),
+        );
+        Ok(Literal::Nil)
     }
 
     pub fn evaluate(&mut self, expr: &Expr) -> EvaluationResult {

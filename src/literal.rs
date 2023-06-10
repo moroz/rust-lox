@@ -2,13 +2,25 @@ use std::fmt::{Debug, Display};
 
 use crate::function::Function;
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone)]
 pub enum Literal {
     Function(Function),
     String(String),
     Number(f64),
     Boolean(bool),
     Nil,
+}
+
+impl PartialEq for Literal {
+    fn eq(&self, rhs: &Self) -> bool {
+        match (self, rhs) {
+            (Self::String(lhs), Self::String(rhs)) => lhs == rhs,
+            (Self::Number(lhs), Self::Number(rhs)) => lhs == rhs,
+            (Self::Boolean(lhs), Self::Boolean(rhs)) => lhs == rhs,
+            (Self::Nil, Self::Nil) => true,
+            (_, _) => false,
+        }
+    }
 }
 
 impl Debug for Literal {
