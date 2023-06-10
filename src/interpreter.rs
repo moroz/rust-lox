@@ -177,6 +177,7 @@ impl Interpreter {
                 arity: params.len(),
                 params: Box::new(params.clone()),
                 body: Box::new(body.clone()),
+                closure: self.environment.clone(),
             }),
         );
         Ok(Literal::Nil)

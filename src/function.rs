@@ -19,6 +19,7 @@ pub enum Function {
         arity: usize,
         params: Box<Vec<Token>>,
         body: Box<Vec<Stmt>>,
+        closure: Rc<RefCell<Environment>>,
     },
 }
 
@@ -37,8 +38,13 @@ impl Function {
     ) -> EvaluationResult {
         match self {
             Self::Native { body, .. } => Ok(body(arguments)),
-            Self::Lox { body, params, .. } => {
-                let mut env = Environment::enclose(&interpreter.globals);
+            Self::Lox {
+                body,
+                params,
+                closure,
+                ..
+            } => {
+                let mut env = Environment::enclose(closure);
                 let mut i = 0;
                 for param in params.iter() {
                     let value = arguments.get(i).unwrap();
