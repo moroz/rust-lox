@@ -1,4 +1,5 @@
 use crate::{
+    errors::{LoxError, LoxErrorType},
     expr::Expr,
     literal::Literal,
     stmt::Stmt,
@@ -10,10 +11,7 @@ pub struct Parser {
     current: usize,
 }
 
-#[derive(Clone, Debug)]
-pub struct ParseError(String);
-
-type ParseResult<T> = Result<T, ParseError>;
+type ParseResult<T> = Result<T, LoxError>;
 
 macro_rules! match_any_token {
     ($parser:expr, $($token:expr),* ) => {
@@ -28,7 +26,7 @@ impl Parser {
         Self { tokens, current: 0 }
     }
 
-    pub fn parse(&mut self) -> Result<Vec<Stmt>, Vec<ParseError>> {
+    pub fn parse(&mut self) -> Result<Vec<Stmt>, Vec<LoxError>> {
         if self.tokens.len() == 1 {
             return Ok(vec![Stmt::Expression(Expr::Literal(Literal::Nil))]);
         }
@@ -86,10 +84,11 @@ impl Parser {
             loop {
                 params.push(self.consume_identifier("Expected parameter name.")?);
                 if params.len() >= 255 {
-                    return Err(ParseError(format!(
-                        "A {} cannot have more than 255 parameters.",
-                        kind
-                    )));
+                    let err = LoxError::parse_error(
+                        self.previous(),
+                        format!("A {} cannot have more than 255 parameters.", kind),
+                    );
+                    return Err(err);
                 }
                 if !self.match_token(&TokenType::Comma) {
                     break;
@@ -113,7 +112,7 @@ impl Parser {
         match token.token_type {
             TokenType::Identifier(_) => return Ok(self.advance().clone()),
             _ => {
-                return Err(ParseError(msg.to_owned()));
+                return Err(LoxError::parse_error(&token, msg.to_owned()));
             }
         }
     }
@@ -134,7 +133,12 @@ impl Parser {
                 )?;
                 return Ok(Stmt::Var(identifier, initializer));
             }
-            _ => return Err(ParseError("Expected variable name.".to_string())),
+            _ => {
+                return Err(LoxError::parse_error(
+                    &identifier,
+                    "Expected variable name.",
+                ))
+            }
         }
     }
 
@@ -143,6 +147,10 @@ impl Parser {
             TokenType::Print => {
                 self.advance();
                 self.print_statement()
+            }
+            TokenType::Return => {
+                self.advance();
+                self.return_statement()
             }
             TokenType::While => {
                 self.advance();
@@ -197,6 +205,17 @@ impl Parser {
         let expr = self.expression()?;
         self.consume(&TokenType::Semicolon, "Expected semicolon")?;
         Ok(Stmt::Print(expr))
+    }
+
+    fn return_statement(&mut self) -> ParseResult<Stmt> {
+        let keyword = self.previous().clone();
+        let value = if self.check(&TokenType::Semicolon) {
+            None
+        } else {
+            Some(self.expression()?)
+        };
+        self.consume(&TokenType::Semicolon, "Expected ';' after return value.")?;
+        Ok(Stmt::Return(keyword.clone(), value))
     }
 
     fn while_statement(&mut self) -> ParseResult<Stmt> {
@@ -298,7 +317,12 @@ impl Parser {
                 Ok(Expr::Var(name)) => {
                     return Ok(Expr::Assign(name, Box::new(value)));
                 }
-                _ => return Err(ParseError("Invalid assignment target.".to_string())),
+                _ => {
+                    return Err(LoxError::parse_error(
+                        self.previous(),
+                        "Invalid assignment target.".to_string(),
+                    ))
+                }
             }
         }
 
@@ -414,7 +438,8 @@ impl Parser {
             loop {
                 args.push(self.expression()?);
                 if args.len() >= 255 {
-                    return Err(ParseError(
+                    return Err(LoxError::parse_error(
+                        self.previous(),
                         "Function call cannot have more than 255 arguments.".to_string(),
                     ));
                 }
@@ -429,7 +454,7 @@ impl Parser {
         return Ok(Expr::Call(Box::new(callee.clone()), paren.clone(), args));
     }
 
-    fn primary(&mut self) -> Result<Expr, ParseError> {
+    fn primary(&mut self) -> ParseResult<Expr> {
         match self.peek().token_type {
             TokenType::False => {
                 self.advance();
@@ -467,16 +492,19 @@ impl Parser {
             TokenType::Identifier(_) => {
                 return Ok(Expr::Var(self.advance().to_owned()));
             }
-            _ => Err(ParseError("Expected expression".to_string())),
+            _ => Err(LoxError::parse_error(
+                self.previous(),
+                "Expected expression".to_string(),
+            )),
         }
     }
 
-    fn consume(&mut self, token_type: &TokenType, msg: &str) -> Result<&Token, ParseError> {
+    fn consume(&mut self, token_type: &TokenType, msg: &str) -> ParseResult<&Token> {
         if self.check(token_type) {
             return Ok(self.advance());
         }
 
-        Err(ParseError(msg.to_owned()))
+        Err(LoxError::parse_error(&self.peek(), msg))
     }
 
     fn match_token(&mut self, token_type: &TokenType) -> bool {

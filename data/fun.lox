@@ -5,8 +5,11 @@ fun greet(name) {
 greet("世界");
 
 fun add(x, y) {
-  return x + y;
+  if (x > y) {
+    return x + y;
+  } else {
+    return x - y;
+  }
 }
 
-var result = add(21, 37);
-print(result);
+print add(21, 37);

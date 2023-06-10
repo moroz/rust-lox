@@ -2,7 +2,7 @@ use crate::{literal::Literal, token::Token};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum LoxErrorType {
-    SyntaxError,
+    SyntaxError(String),
     RuntimeError(DetailedErrorType),
     Return(Literal),
 }
@@ -27,6 +27,14 @@ impl LoxError {
         Self {
             line: token.line,
             kind,
+            token: token.clone(),
+        }
+    }
+
+    pub fn parse_error(token: &Token, msg: impl Into<String>) -> Self {
+        Self {
+            line: token.line,
+            kind: LoxErrorType::SyntaxError(msg.into()),
             token: token.clone(),
         }
     }
