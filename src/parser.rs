@@ -1,5 +1,5 @@
 use crate::{
-    errors::{LoxError, LoxErrorType},
+    errors::LoxError,
     expr::Expr,
     literal::Literal,
     stmt::Stmt,
