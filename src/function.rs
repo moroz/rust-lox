@@ -2,6 +2,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use crate::{
     environment::Environment,
+    errors::{LoxError, LoxErrorType},
     interpreter::{EvaluationResult, Interpreter},
     literal::Literal,
     stmt::Stmt,
@@ -44,7 +45,13 @@ impl Function {
                     env.define(param.lexeme.clone(), value.clone());
                     i += 1;
                 }
-                interpreter.execute_block(body, Rc::new(RefCell::new(env)))
+                match interpreter.execute_block(body, Rc::new(RefCell::new(env))) {
+                    Err(LoxError {
+                        kind: LoxErrorType::Return(value),
+                        ..
+                    }) => Ok(value),
+                    other => other,
+                }
             }
         }
     }

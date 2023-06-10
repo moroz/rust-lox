@@ -28,8 +28,7 @@ fn evaluate_arithmetic(operator: &Token, left: &Literal, right: &Literal) -> Eva
 
         _ => Err(LoxError::new(
             &operator,
-            LoxErrorType::RuntimeError,
-            DetailedErrorType::ExpectedNumber,
+            LoxErrorType::RuntimeError(DetailedErrorType::ExpectedNumber),
         )),
     }
 }
@@ -46,8 +45,7 @@ fn evaluate_comparison(operator: &Token, left: &Literal, right: &Literal) -> Eva
 
         _ => Err(LoxError::new(
             &operator,
-            LoxErrorType::RuntimeError,
-            DetailedErrorType::ExpectedNumber,
+            LoxErrorType::RuntimeError(DetailedErrorType::ExpectedNumber),
         )),
     }
 }
@@ -94,6 +92,13 @@ impl Interpreter {
             Stmt::Block(statements) => {
                 let env = Environment::enclose(&self.environment);
                 self.execute_block(statements, Rc::new(RefCell::new(env)))
+            }
+            Stmt::Return(keyword, value) => {
+                let value = match value {
+                    Some(expr) => self.evaluate(expr)?,
+                    None => Literal::Nil,
+                };
+                Err(LoxError::new(keyword, LoxErrorType::Return(value)))
             }
         }
     }
@@ -197,8 +202,7 @@ impl Interpreter {
             Some(value) => Ok(value.to_owned()),
             None => Err(LoxError::new(
                 &identifier,
-                LoxErrorType::RuntimeError,
-                DetailedErrorType::UndeclaredIdentifier,
+                LoxErrorType::RuntimeError(DetailedErrorType::UndeclaredIdentifier),
             )),
         }
     }
@@ -223,16 +227,14 @@ impl Interpreter {
                 if fun.arity() != arity {
                     return Err(LoxError::new(
                         paren,
-                        LoxErrorType::RuntimeError,
-                        DetailedErrorType::InvalidArity,
+                        LoxErrorType::RuntimeError(DetailedErrorType::InvalidArity),
                     ));
                 }
                 fun.call(self, &args)
             }
             _ => Err(LoxError::new(
                 paren,
-                LoxErrorType::RuntimeError,
-                DetailedErrorType::NotCallable,
+                LoxErrorType::RuntimeError(DetailedErrorType::NotCallable),
             )),
         }
     }
@@ -270,8 +272,7 @@ impl Interpreter {
         } else {
             Err(LoxError::new(
                 &identifier,
-                LoxErrorType::RuntimeError,
-                DetailedErrorType::UndeclaredIdentifier,
+                LoxErrorType::RuntimeError(DetailedErrorType::UndeclaredIdentifier),
             ))
         }
     }
@@ -287,8 +288,7 @@ impl Interpreter {
                 Literal::Number(value) => Ok(Literal::Number(-value)),
                 _ => Err(LoxError::new(
                     &operator,
-                    LoxErrorType::RuntimeError,
-                    DetailedErrorType::ExpectedNumber,
+                    LoxErrorType::RuntimeError(DetailedErrorType::ExpectedNumber),
                 )),
             },
             TokenType::Bang => return Ok(Literal::Boolean(right.is_truthy())),

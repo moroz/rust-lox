@@ -1,9 +1,10 @@
-use crate::token::Token;
+use crate::{literal::Literal, token::Token};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum LoxErrorType {
     SyntaxError,
-    RuntimeError,
+    RuntimeError(DetailedErrorType),
+    Return(Literal),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -16,21 +17,17 @@ pub enum DetailedErrorType {
 
 #[derive(Clone, Debug)]
 pub struct LoxError {
-    token: Token,
-    kind: LoxErrorType,
-    detailed_type: DetailedErrorType,
-    line: usize,
-    msg: Option<String>,
+    pub token: Token,
+    pub kind: LoxErrorType,
+    pub line: usize,
 }
 
 impl LoxError {
-    pub fn new(token: &Token, kind: LoxErrorType, detailed_type: DetailedErrorType) -> Self {
+    pub fn new(token: &Token, kind: LoxErrorType) -> Self {
         Self {
             line: token.line,
             kind,
-            detailed_type,
             token: token.clone(),
-            msg: None,
         }
     }
 }

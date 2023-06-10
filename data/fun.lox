@@ -3,3 +3,10 @@ fun greet(name) {
 }
 
 greet("世界");
+
+fun add(x, y) {
+  return x + y;
+}
+
+var result = add(21, 37);
+print(result);
