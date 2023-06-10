@@ -15,6 +15,14 @@ pub struct ParseError(String);
 
 type ParseResult<T> = Result<T, ParseError>;
 
+macro_rules! match_any_token {
+    ($parser:expr, $($token:expr),* ) => {
+        $(
+            Parser::match_token($parser, &$token) ||
+        )* false
+    };
+}
+
 impl Parser {
     pub fn new(tokens: Vec<Token>) -> Self {
         Self { tokens, current: 0 }
@@ -320,8 +328,7 @@ impl Parser {
     fn equality(&mut self) -> ParseResult<Expr> {
         let mut expr = self.comparison()?;
 
-        let token_types = vec![TokenType::BangEqual, TokenType::EqualEqual];
-        while self.match_any_token(&token_types) {
+        while match_any_token!(self, TokenType::BangEqual, TokenType::EqualEqual) {
             let token = self.previous().clone();
             let right = self.comparison()?;
             expr = Expr::Binary(Box::new(expr), token.clone(), Box::new(right));
@@ -333,13 +340,13 @@ impl Parser {
     fn comparison(&mut self) -> ParseResult<Expr> {
         let mut expr = self.term()?;
 
-        let token_types = vec![
+        while match_any_token!(
+            self,
             TokenType::Greater,
             TokenType::GreaterEqual,
             TokenType::Less,
-            TokenType::LessEqual,
-        ];
-        while self.match_any_token(&token_types) {
+            TokenType::LessEqual
+        ) {
             let operator = self.previous().clone();
             let right = self.term()?;
             expr = Expr::Binary(Box::new(expr), operator.to_owned(), Box::new(right));
@@ -351,8 +358,7 @@ impl Parser {
     fn term(&mut self) -> ParseResult<Expr> {
         let mut expr = self.factor()?;
 
-        let token_types = vec![TokenType::Minus, TokenType::Plus];
-        while self.match_any_token(&token_types) {
+        while match_any_token!(self, TokenType::Minus, TokenType::Plus) {
             let operator = self.previous().clone();
             let right = self.factor()?;
             expr = Expr::Binary(Box::new(expr), operator.to_owned(), Box::new(right));
@@ -364,8 +370,7 @@ impl Parser {
     fn factor(&mut self) -> ParseResult<Expr> {
         let mut expr = self.unary()?;
 
-        let token_types = vec![TokenType::Slash, TokenType::Star];
-        while self.match_any_token(&token_types) {
+        while match_any_token!(self, TokenType::Slash, TokenType::Star) {
             let operator = self.previous().clone();
             let right = self.unary()?;
             expr = Expr::Binary(Box::new(expr), operator.to_owned(), Box::new(right));
@@ -375,8 +380,7 @@ impl Parser {
     }
 
     fn unary(&mut self) -> ParseResult<Expr> {
-        let token_types = vec![TokenType::Bang, TokenType::Minus];
-        if self.match_any_token(&token_types) {
+        if match_any_token!(self, TokenType::Bang, TokenType::Minus) {
             let operator = self.previous().clone();
             let right = self.unary()?;
             return Ok(Expr::Unary(operator.to_owned(), Box::new(right)));
@@ -469,15 +473,6 @@ impl Parser {
         }
 
         Err(ParseError(msg.to_owned()))
-    }
-
-    fn match_any_token(&mut self, tokens: &Vec<TokenType>) -> bool {
-        for token in tokens {
-            if self.match_token(token) {
-                return true;
-            }
-        }
-        return false;
     }
 
     fn match_token(&mut self, token_type: &TokenType) -> bool {
